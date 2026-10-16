@@ -12,7 +12,7 @@ export const produtosDemo: ProdutoDemo[] = [
     preco: 189.9,
     categoria: "Vestidos",
     cores: [
-      { nome: "Rosa", hex: "#d98a94" },
+      { nome: "Dourado", hex: "#cbb389" },
       { nome: "Off-white", hex: "#f5efe6" },
     ],
     tamanhos: ["P", "M", "G"],
