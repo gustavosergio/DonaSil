@@ -13,7 +13,7 @@ export default function PaginaCatalogo() {
       id="conteudo"
       className="mx-auto flex max-w-3xl flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center"
     >
-      <p className="text-xs font-semibold uppercase tracking-[0.35em] text-wine">
+      <p className="text-xs font-semibold uppercase tracking-[0.35em] text-gold-ink">
         Em preparação
       </p>
       <h1 className="font-display text-4xl font-semibold text-ink">
@@ -25,7 +25,7 @@ export default function PaginaCatalogo() {
       </p>
       <Link
         href="/"
-        className="mt-4 rounded-full border border-wine px-6 py-3 text-sm font-medium text-wine transition hover:bg-champagne"
+        className="mt-4 rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold-ink transition hover:bg-champagne"
       >
         Voltar ao início
       </Link>

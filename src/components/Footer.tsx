@@ -7,7 +7,7 @@ export default function Footer() {
     <footer className="border-t border-sand bg-ivory">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-3 sm:px-6">
         <div>
-          <p className="font-display text-2xl font-semibold text-wine">
+          <p className="font-display text-2xl font-semibold text-gold-ink">
             {site.nome}
           </p>
           <p className="mt-3 max-w-xs text-sm leading-6 text-ink-soft">
@@ -20,12 +20,12 @@ export default function Footer() {
           <p className="text-sm font-semibold text-ink">Navegar</p>
           <ul className="mt-3 space-y-2 text-sm text-ink-soft">
             <li>
-              <Link href="/" className="transition hover:text-wine">
+              <Link href="/" className="transition hover:text-gold-ink">
                 Início
               </Link>
             </li>
             <li>
-              <Link href="/catalogo" className="transition hover:text-wine">
+              <Link href="/catalogo" className="transition hover:text-gold-ink">
                 Catálogo
               </Link>
             </li>
@@ -42,7 +42,7 @@ export default function Footer() {
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="transition hover:text-wine"
+                className="transition hover:text-gold-ink"
               >
                 WhatsApp
               </a>
@@ -52,7 +52,7 @@ export default function Footer() {
                 href={site.instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 transition hover:text-wine"
+                className="inline-flex items-center gap-2 transition hover:text-gold-ink"
               >
                 <svg
                   className="h-4 w-4"

@@ -15,7 +15,7 @@ export default function Home() {
       <section className="bg-gradient-to-b from-champagne/70 via-cream to-cream">
         <div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-2 lg:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-wine">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-gold-ink">
               Moda feminina
             </p>
             <h1 className="mt-4 font-display text-5xl font-semibold leading-tight text-ink sm:text-6xl">
@@ -29,7 +29,7 @@ export default function Home() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/catalogo"
-                className="rounded-full bg-wine px-6 py-3 text-sm font-medium text-white transition hover:bg-wine-deep"
+                className="rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition hover:bg-gold-deep"
               >
                 Explorar o catálogo
               </Link>
@@ -37,7 +37,7 @@ export default function Home() {
                 href={linkWhatsApp(MENSAGEM_ATENDIMENTO)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full border border-wine px-6 py-3 text-sm font-medium text-wine transition hover:bg-champagne"
+                className="rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold-ink transition hover:bg-champagne"
               >
                 Tirar dúvidas
               </a>
@@ -71,7 +71,7 @@ export default function Home() {
             <li key={categoria}>
               <Link
                 href="/catalogo"
-                className="flex h-24 items-center justify-center rounded-2xl border border-sand bg-ivory text-sm font-medium text-ink transition hover:border-wine hover:text-wine sm:h-28"
+                className="flex h-24 items-center justify-center rounded-2xl border border-sand bg-ivory text-sm font-medium text-ink transition hover:border-gold hover:text-gold-ink sm:h-28"
               >
                 {categoria}
               </Link>
@@ -91,7 +91,7 @@ export default function Home() {
           </h2>
           <Link
             href="/catalogo"
-            className="text-sm font-medium text-wine hover:underline"
+            className="text-sm font-medium text-gold-ink hover:underline"
           >
             Ver tudo
           </Link>
@@ -111,11 +111,11 @@ export default function Home() {
 
       {/* Chamada para o WhatsApp */}
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="rounded-3xl bg-wine px-6 py-14 text-center sm:px-12">
-          <h2 className="mx-auto max-w-2xl font-display text-2xl font-semibold text-white sm:text-3xl">
+        <div className="rounded-3xl bg-gold px-6 py-14 text-center sm:px-12">
+          <h2 className="mx-auto max-w-2xl font-display text-2xl font-semibold text-ink sm:text-3xl">
             Dúvidas sobre peças, tamanhos ou entregas?
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-white/80">
+          <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/70">
             Fale com a gente pelo WhatsApp. Atendimento pessoal, do jeito que
             sempre foi na Dona Sil.
           </p>
@@ -123,7 +123,7 @@ export default function Home() {
             href={linkWhatsApp(MENSAGEM_ATENDIMENTO)}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-8 inline-block rounded-full bg-white px-6 py-3 text-sm font-medium text-wine transition hover:bg-champagne"
+            className="mt-8 inline-block rounded-full bg-ivory px-6 py-3 text-sm font-medium text-gold-ink transition hover:bg-champagne"
           >
             Chamar no WhatsApp
           </a>

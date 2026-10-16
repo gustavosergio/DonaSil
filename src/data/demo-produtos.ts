@@ -25,7 +25,7 @@ export const produtosDemo: ProdutoDemo[] = [
     preco: 89.9,
     categoria: "Blusas",
     cores: [
-      { nome: "Vinho", hex: "#7d3c4c" },
+      { nome: "Marrom", hex: "#8a6a42" },
       { nome: "Preto", hex: "#2b2420" },
     ],
     tamanhos: ["P", "M", "G", "GG"],
