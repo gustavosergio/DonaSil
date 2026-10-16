@@ -43,7 +43,7 @@ export default function Header() {
 
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition hover:bg-blush sm:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition hover:bg-champagne sm:hidden"
           aria-expanded={menuAberto}
           aria-controls="menu-mobile"
           aria-label={menuAberto ? "Fechar menu" : "Abrir menu"}
@@ -76,7 +76,7 @@ export default function Header() {
             <li>
               <Link
                 href="/"
-                className="block rounded-lg px-3 py-3 text-ink transition hover:bg-blush"
+                className="block rounded-lg px-3 py-3 text-ink transition hover:bg-champagne"
                 onClick={() => setMenuAberto(false)}
               >
                 Início
@@ -85,7 +85,7 @@ export default function Header() {
             <li>
               <Link
                 href="/catalogo"
-                className="block rounded-lg px-3 py-3 text-ink transition hover:bg-blush"
+                className="block rounded-lg px-3 py-3 text-ink transition hover:bg-champagne"
                 onClick={() => setMenuAberto(false)}
               >
                 Catálogo

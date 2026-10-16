@@ -48,12 +48,26 @@ export default function Footer() {
               </a>
             </li>
             <li>
-              Instagram: {site.instagram}
-              {MODO_DEMO && (
-                <span className="ml-2 rounded-full bg-blush px-2 py-0.5 text-xs text-ink-soft">
-                  demonstrativo
-                </span>
-              )}
+              <a
+                href={site.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 transition hover:text-wine"
+              >
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <circle cx="12" cy="12" r="4" />
+                  <circle cx="17.2" cy="6.8" r="0.7" fill="currentColor" stroke="none" />
+                </svg>
+                {site.instagram}
+              </a>
             </li>
           </ul>
         </div>
@@ -62,8 +76,8 @@ export default function Footer() {
       <div className="border-t border-sand px-4 py-6 text-center text-xs leading-6 text-ink-soft sm:px-6">
         {MODO_DEMO && (
           <p>
-            Modo demonstração: nomes, preços e contatos exibidos são fictícios
-            até a publicação oficial.
+            Modo demonstração: nomes, preços e fotos exibidos são exemplos
+            fictícios até a publicação oficial.
           </p>
         )}
         <p>© 2026 {site.nome}. Todos os direitos reservados.</p>

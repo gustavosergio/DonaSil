@@ -51,7 +51,7 @@ export const produtosDemo: ProdutoDemo[] = [
     preco: 149.9,
     categoria: "Kimonos",
     cores: [
-      { nome: "Estampado", hex: "#c99aa3" },
+      { nome: "Estampado", hex: "#cbb389" },
     ],
     tamanhos: ["P/M", "G/GG"],
   },

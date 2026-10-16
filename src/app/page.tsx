@@ -12,7 +12,7 @@ export default function Home() {
   return (
     <main id="conteudo">
       {/* Destaque principal */}
-      <section className="bg-gradient-to-b from-blush/70 via-cream to-cream">
+      <section className="bg-gradient-to-b from-champagne/70 via-cream to-cream">
         <div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-2 lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-wine">
@@ -37,7 +37,7 @@ export default function Home() {
                 href={linkWhatsApp(MENSAGEM_ATENDIMENTO)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full border border-wine px-6 py-3 text-sm font-medium text-wine transition hover:bg-blush"
+                className="rounded-full border border-wine px-6 py-3 text-sm font-medium text-wine transition hover:bg-champagne"
               >
                 Tirar dúvidas
               </a>
@@ -49,7 +49,7 @@ export default function Home() {
             aria-hidden="true"
             className="relative mx-auto hidden h-80 w-72 sm:block lg:h-96 lg:w-80"
           >
-            <div className="absolute inset-0 rotate-3 rounded-3xl bg-rose/40" />
+            <div className="absolute inset-0 rotate-3 rounded-3xl bg-gold-soft/40" />
             <div className="absolute inset-0 -rotate-2 overflow-hidden rounded-3xl bg-sand">
               <div className="flex h-full items-end p-4">
                 <span className="rounded-full bg-white/85 px-3 py-1 text-xs text-ink-soft">
@@ -123,7 +123,7 @@ export default function Home() {
             href={linkWhatsApp(MENSAGEM_ATENDIMENTO)}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-8 inline-block rounded-full bg-white px-6 py-3 text-sm font-medium text-wine transition hover:bg-blush"
+            className="mt-8 inline-block rounded-full bg-white px-6 py-3 text-sm font-medium text-wine transition hover:bg-champagne"
           >
             Chamar no WhatsApp
           </a>

@@ -13,8 +13,8 @@ export default function ProductCard({ produto }: { produto: ProdutoDemo }) {
       aria-label={`${produto.nome}, ${formatarBRL(produto.preco)} — ver no catálogo`}
       className="group block"
     >
-      <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-blush">
-        <div className="absolute inset-0 bg-gradient-to-br from-rose/50 via-blush to-sand transition-transform duration-300 group-hover:scale-[1.02]" />
+      <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-champagne">
+        <div className="absolute inset-0 bg-gradient-to-br from-gold-soft/50 via-champagne to-sand transition-transform duration-300 group-hover:scale-[1.02]" />
         <div className="absolute bottom-3 left-3 rounded-full bg-white/85 px-3 py-1 text-xs text-ink-soft">
           Foto demonstrativa
         </div>

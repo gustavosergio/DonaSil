@@ -1,8 +1,10 @@
 // Configuração central do site.
 //
-// MODO_DEMO = true enquanto o site usa apenas dados fictícios.
-// Na Etapa 10 (dados reais) este valor muda para false e os avisos
-// de demonstração desaparecem automaticamente.
+// MODO_DEMO = true enquanto o catálogo usa apenas dados fictícios
+// (nomes, preços e fotos de exemplo). Na Etapa 10 este valor muda
+// para false e os avisos de demonstração desaparecem automaticamente.
+//
+// Os contatos abaixo já são os oficiais da loja.
 
 export const MODO_DEMO = true;
 
@@ -10,10 +12,10 @@ export const site = {
   nome: "Dona Sil",
   tagline: "Moda feminina com carinho",
 
-  // Contato DEMO — trocado pelo número real da loja na Etapa 10.
-  // Formato internacional, sem "+" e sem espaços.
-  whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "5511999999999",
+  // WhatsApp oficial da loja — formato internacional, sem "+".
+  whatsapp: "5581999770114",
 
-  // Identificação DEMO — perfil real será informado pela loja.
-  instagram: "@donasil",
+  // Instagram oficial da loja.
+  instagram: "@donasilmodafeminina",
+  instagramUrl: "https://www.instagram.com/donasilmodafeminina/",
 };

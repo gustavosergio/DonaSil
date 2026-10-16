@@ -25,7 +25,7 @@ export default function PaginaCatalogo() {
       </p>
       <Link
         href="/"
-        className="mt-4 rounded-full border border-wine px-6 py-3 text-sm font-medium text-wine transition hover:bg-blush"
+        className="mt-4 rounded-full border border-wine px-6 py-3 text-sm font-medium text-wine transition hover:bg-champagne"
       >
         Voltar ao início
       </Link>
