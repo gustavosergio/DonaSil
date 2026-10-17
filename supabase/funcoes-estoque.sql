@@ -156,6 +156,22 @@ begin
     raise exception 'DADOS_INVALIDOS: item malformado ou quantidade acima de %', v_limite_item;
   end if;
 
+  -- 4b) Limite também na SOMA das linhas repetidas:
+  --      duas linhas de 10+10 da mesma variação = 20 => recusado,
+  --      mesmo que cada linha passe no limite individual.
+  --      Roda ANTES do frete, do catálogo e de qualquer débito.
+  select count(*) into v_ruins
+    from (
+      select (e.value->>'variacao_id')::uuid as variacao_id,
+             sum((e.value->>'quantidade')::int) as qtd
+      from jsonb_array_elements(p_dados->'itens') e
+      group by 1
+    ) i
+    where i.qtd > v_limite_item;
+  if v_ruins > 0 then
+    raise exception 'DADOS_INVALIDOS: soma das linhas do mesmo item passa de % unidades', v_limite_item;
+  end if;
+
   -- 5) Frete: obrigatório. ID validado antes de converter, valor
   --    SEMPRE lido do banco (nunca do navegador).
   if p_dados->>'faixa_frete_id' is null

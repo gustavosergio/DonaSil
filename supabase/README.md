@@ -49,7 +49,7 @@ Cada arquivo roda no **Supabase → SQL Editor** (colar → Run), um por vez, na
 - Mesma chave de idempotência = mesmo pedido; chamadas simultâneas com a mesma chave são serializadas por trava de advisory lock — a segunda recebe o pedido da primeira, sem erro e sem débito duplo.
 - Itens repetidos no carrinho são somados (unificados por variação) antes de debitar.
 - Cancelar/expirar devolvem estoque UMA vez (`estoque_devolvido`), sempre SOMANDO as linhas por variação.
-- Limites: 20 itens por carrinho, 10 unidades por item; frete obrigatório e validado; dados da cliente validados (tamanhos, UF com 2 letras).
+- Limites: 20 itens por carrinho, 10 unidades por item — por linha E na soma das linhas repetidas da mesma variação (validado antes de qualquer débito); frete obrigatório e validado; dados da cliente validados (tamanhos, UF com 2 letras).
 - `compras_ativas=false`: servidor recusa qualquer pedido.
 - `existe_admin()` roda como dona (SECURITY DEFINER) com `search_path` vazio e tudo qualificado — sem risco de sequestro.
 
@@ -88,6 +88,11 @@ simulados, privilégios padrão reproduzidos). **Zero contato com o banco de voc
 | t15/t15b/t15c | Quantidade 11 / variacao_id inválida / 21 itens | ✅ `DADOS_INVALIDOS` |
 | t16 | Pede 5 com estoque 3 → rollback total, estoque intacto | ✅ `ESTOQUE_INSUFICIENTE` |
 | t17 | Carrinho com item repetido: unificado em 1 linha (qtd 3), débito único | ✅ PASS |
+| t17b | **Duas linhas da mesma variação com 10+10** → recusado; estoque intacto; zero pedido novo (rollback total) | ✅ `DADOS_INVALIDOS: soma…` |
+| t17c | **Combinação válida de linhas repetidas** (2+1 = 3) → pedido criado, 1 linha qtd 3, débito único | ✅ PASS |
+| t17d | 10+10 em variação com estoque GRANDE (20) → ainda recusado: **limite aplicado antes de qualquer débito** | ✅ PASS |
+| t17e | Soma exatamente no limite (5+5 = 10) → aceito (fronteira inclusiva), 1 linha qtd 10 | ✅ PASS |
+| t17f | Soma 11 (6+5) → recusado, estoque e pedidos intactos | ✅ PASS |
 | t18 | Zero estoques negativos no fim | ✅ PASS |
 | t19 | Cancelar pendente: devolve 1x; 2ª chamada `JA_PROCESSADO` | ✅ PASS |
 | t20 | Cancelar pedido `enviada` → `STATUS_INVALIDO`, estoque não devolve | ✅ PASS |
@@ -108,6 +113,11 @@ configuração como se fosse objeto (`valor->>'compras_ativas'`) mas o seed
 guarda o valor direto. Falhava fechado (nunca venderia por engano), mas
 também não venderia quando ligado. Corrigido para `valor #>> '{}'` e
 re-testado (t01, t28b).
+
+**Buraco encontrado na revisão 3 e corrigido:** o limite de 10 unidades era
+validado por linha, então duas linhas da mesma variação com 10+10 passavam
+e somavam 20 no débito. Agora existe o passo 4b: a soma unificada por
+variação também é validada, antes de qualquer débito (t17b–t17f).
 
 ---
 
