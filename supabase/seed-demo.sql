@@ -8,8 +8,16 @@
 -- * Preços, cores e fretes são INVENTADOS, só para testar o site.
 -- * compras_ativas = false: enquanto estiver false, o SERVIDOR
 --   recusa qualquer compra (modo demonstração).
--- * Este arquivo pode rodar de novo sem duplicar nada
---   (linhas iguais são ignoradas).
+-- * Este arquivo pode rodar DE NOVO com segurança:
+--     - produtos que já existem são ignorados (on conflict do
+--       nothing) e NÃO duplicam;
+--     - o estoque atual das variações NÃO é mexido — o que os
+--       testes alteraram permanece alterado;
+--     - categorias, frete e configuração idem (ignorados).
+--   Observação: se uma execução antiga foi interrompida no meio,
+--   reexecutar não preenche o que faltou num produto que já
+--   existia — nesse caso raro, apague o produto incompleto e
+--   rode de novo.
 --
 -- PROPÓSITOS DE TESTE embarcados de propósito:
 --   - Kimono Longo Palace: TODO estoque 0 => selo "Esgotado".
@@ -52,6 +60,7 @@ with p as (
          '100% viscose', 'Lavar à mão, secar à sombra',
          189.90, c.id, true, true
   from public.categorias c where c.slug = 'vestidos'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -71,6 +80,7 @@ with p as (
          'Longo fluido com alças ajustáveis, para festas e praia.',
          249.90, c.id, true
   from public.categorias c where c.slug = 'vestidos'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -88,6 +98,7 @@ with p as (
          'Curto com babado, visual jovem e romântico.',
          159.90, c.id, true
   from public.categorias c where c.slug = 'vestidos'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -106,6 +117,7 @@ with p as (
          'Viscose e linho', 'Lavar à mão',
          179.90, c.id, true
   from public.categorias c where c.slug = 'vestidos'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -124,6 +136,7 @@ with p as (
          'Midi com fenda lateral, elegante de dia e de noite.',
          199.90, c.id, true
   from public.categorias c where c.slug = 'vestidos'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -140,6 +153,7 @@ with p as (
          'Cetim macio com laço frontal, toque de elegância.',
          89.90, c.id, true, true
   from public.categorias c where c.slug = 'blusas'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -158,6 +172,7 @@ with p as (
          'Alças finas com toque de seda, fresquinha para o calor.',
          99.90, c.id, true
   from public.categorias c where c.slug = 'blusas'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -177,6 +192,7 @@ with p as (
          '100% linho', 'Lavar à mão',
          119.90, c.id, true
   from public.categorias c where c.slug = 'blusas'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -195,6 +211,7 @@ with p as (
          'Decote ombro a ombro com babado discreto.',
          94.90, c.id, true
   from public.categorias c where c.slug = 'blusas'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -213,6 +230,7 @@ with p as (
          'Não torcer, secar na horizontal',
          109.90, c.id, true
   from public.categorias c where c.slug = 'blusas'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -230,6 +248,7 @@ with p as (
          'Plissada com elástico na cintura, caimento impecável.',
          129.90, c.id, true, true
   from public.categorias c where c.slug = 'saias'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -249,6 +268,7 @@ with p as (
          'Godê com estampa floral, movimento no passo.',
          119.90, c.id, true
   from public.categorias c where c.slug = 'saias'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -266,6 +286,7 @@ with p as (
          'Reta estruturada, tecido firme para look sério.',
          139.90, c.id, true
   from public.categorias c where c.slug = 'saias'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -284,6 +305,7 @@ with p as (
          'Longa fluida, leve com o vento.',
          149.90, c.id, true
   from public.categorias c where c.slug = 'saias'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -301,6 +323,7 @@ with p as (
          'Aberto e fluido, transforma qualquer look básico.',
          149.90, c.id, true, true
   from public.categorias c where c.slug = 'kimonos'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -319,6 +342,7 @@ with p as (
          'Curto com bordado na barra, charme extra.',
          129.90, c.id, true
   from public.categorias c where c.slug = 'kimonos'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -336,6 +360,7 @@ with p as (
          'Longo com estampa sofisticada. (produto demo esgotado)',
          189.90, c.id, true
   from public.categorias c where c.slug = 'kimonos'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -354,6 +379,7 @@ with p as (
          'Estampado, use no pescoço ou amarrado na bolsa.',
          59.90, c.id, true
   from public.categorias c where c.slug = 'acessorios'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -369,6 +395,7 @@ with p as (
          'Cinto com fivela dourada, finaliza o look.',
          74.90, c.id, true
   from public.categorias c where c.slug = 'acessorios'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)
@@ -386,6 +413,7 @@ with p as (
          'Colar de contas com brilho discreto.',
          69.90, c.id, true
   from public.categorias c where c.slug = 'acessorios'
+  on conflict (slug) do nothing
   returning id
 )
 insert into public.variacoes (produto_id, tamanho, cor, cor_hex, quantidade)

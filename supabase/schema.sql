@@ -52,8 +52,10 @@ create table if not exists public.faixas_frete (
   ordem  int not null default 0
 );
 
--- CONFIGURAÇÕES (chave/valor geral) ---------------------------
--- Exemplo de chave: compras_ativas (false enquanto em demo)
+-- CONFIGURAÇÕES (chave/valor) ---------------------------
+-- O valor é o DADO DIRETO em jsonb (escalar), não um objeto.
+-- Exemplo: chave 'compras_ativas', valor 'false'::jsonb.
+-- As funções leem com: (valor #>> '{}')::boolean
 create table if not exists public.configuracoes (
   chave  text primary key,
   valor  jsonb not null
