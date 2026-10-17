@@ -51,6 +51,13 @@ alter table public.itens_pedido   enable row level security;
 -- anon e authenticated nascem com GRANT ALL em tabelas novas).
 revoke all on all tables in schema public from anon, authenticated;
 
+-- FUTURO: tabelas criadas DEPOIS deste arquivo também nascem sem
+-- permissões para anon/authenticated. Sem isso, uma tabela nova
+-- esquecida ficaria aberta (o REVOKE acima só pega as tabelas
+-- que já existiam). Quem criar tabela nova concede o mínimo na mão.
+alter default privileges in schema public
+  revoke all on tables from anon, authenticated;
+
 -- Recoloca o MÍNIMO necessário, por papel ---------------------
 -- Catálogo: leitura pública (poder LER, não ESCRITA).
 grant select on public.categorias     to anon, authenticated;

@@ -1,6 +1,6 @@
 # Pasta `supabase/` — banco de dados da Dona Sil
 
-**STATUS: revisão 2 (pós-correções da revisão). NADA aplicado ao banco de produção.**
+**STATUS: revisão 3 (auditoria final pré-push). NADA aplicado ao banco de produção.**
 
 ## O que tem aqui
 
@@ -51,6 +51,7 @@ Cada arquivo roda no **Supabase → SQL Editor** (colar → Run), um por vez, na
 - Cancelar/expirar devolvem estoque UMA vez (`estoque_devolvido`), sempre SOMANDO as linhas por variação.
 - Limites: 20 itens por carrinho, 10 unidades por item — por linha E na soma das linhas repetidas da mesma variação (validado antes de qualquer débito); frete obrigatório e validado; dados da cliente validados (tamanhos, UF com 2 letras).
 - `compras_ativas=false`: servidor recusa qualquer pedido.
+- Tabelas criadas DEPOIS do `politicas-rls.sql` nascem SEM permissões para `anon`/`authenticated` (`alter default privileges`) — uma tabela nova esquecida não fica aberta por engano.
 - `existe_admin()` roda como dona (SECURITY DEFINER) com `search_path` vazio e tudo qualificado — sem risco de sequestro.
 
 **Formato da configuração:** o valor é o dado direto (`'false'::jsonb`), não um objeto. As funções leem com `(valor #>> '{}')::boolean`.
@@ -106,7 +107,12 @@ simulados, privilégios padrão reproduzidos). **Zero contato com o banco de voc
 | t27 | Estoque alterado em teste NÃO voltou ao valor do seed | ✅ PASS |
 | t28 | Configuração alterada em teste preservada pelo re-seed | ✅ PASS |
 | t29 | Políticas re-aplicadas continuam valendo (comum continua bloqueado, admin continua liberado) | ✅ PASS |
+| a30/a30b | Tabela NOVA criada depois do arquivo: `anon` e `authenticated` não conseguem nem ler (default privileges revogados) | ✅ `permission denied` |
 | — | Os 4 arquivos re-executados por cima: zero erros | ✅ PASS |
+
+**Auditoria final:** bateria completa re-executada do zero contra a versão
+final dos arquivos (revisão 3), em Postgres 17 limpo — todos os testes
+acima são desta rodada final.
 
 **Bug real encontrado pela bateria e corrigido:** `criar_pedido` lia a
 configuração como se fosse objeto (`valor->>'compras_ativas'`) mas o seed
@@ -118,6 +124,12 @@ re-testado (t01, t28b).
 validado por linha, então duas linhas da mesma variação com 10+10 passavam
 e somavam 20 no débito. Agora existe o passo 4b: a soma unificada por
 variação também é validada, antes de qualquer débito (t17b–t17f).
+
+**Buraco encontrado na auditoria final e corrigido:** o `REVOKE` de
+`politicas-rls.sql` só atingia as tabelas existentes; uma tabela criada
+depois nasceria aberta (padrão do Supabase dá `anon`/`authenticated` com
+ALL e sem RLS). Corrigido com `ALTER DEFAULT PRIVILEGES … REVOKE ALL`
+(a30/a30b).
 
 ---
 
