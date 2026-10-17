@@ -55,6 +55,12 @@ revoke all on all tables in schema public from anon, authenticated;
 -- permissões para anon/authenticated. Sem isso, uma tabela nova
 -- esquecida ficaria aberta (o REVOKE acima só pega as tabelas
 -- que já existiam). Quem criar tabela nova concede o mínimo na mão.
+-- Observação: vale para objetos criados pelo MESMO papel que roda
+-- este script. No Supabase, o SQL Editor roda como "postgres" — então
+-- cobre tabelas criadas por scripts SQL. Tabelas criadas pelo Table
+-- Editor do painel podem ter outro dono: confirmar com o teste do
+-- README antes de confiar. O service_role NÃO é mexido (o servidor
+-- continua podendo ler).
 alter default privileges in schema public
   revoke all on tables from anon, authenticated;
 

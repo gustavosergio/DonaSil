@@ -108,6 +108,7 @@ simulados, privilégios padrão reproduzidos). **Zero contato com o banco de voc
 | t28 | Configuração alterada em teste preservada pelo re-seed | ✅ PASS |
 | t29 | Políticas re-aplicadas continuam valendo (comum continua bloqueado, admin continua liberado) | ✅ PASS |
 | a30/a30b | Tabela NOVA criada depois do arquivo: `anon` e `authenticated` não conseguem nem ler (default privileges revogados) | ✅ `permission denied` |
+| a31 | Simulação do padrão da plataforma (default privileges doando ALL a `anon`/`authenticated`/`service_role`): após o script, a ACL de padrões fica SÓ com `service_role`; tabela nova tem grants só para `postgres`+`service_role`; `service_role` continua lendo | ✅ PASS |
 | — | Os 4 arquivos re-executados por cima: zero erros | ✅ PASS |
 
 **Auditoria final:** bateria completa re-executada do zero contra a versão
@@ -141,8 +142,9 @@ Estes itens dependem do serviço de verdade e ficam para a validação pós-apli
 2. `auth.uid()` com JWT real — no teste local foi simulado.
 3. Camada REST (PostgREST): formato exato dos erros 401/403 e bloqueio de `/rpc/criar_pedido` para chaves publicáveis.
 4. Storage real: criação do bucket, URL pública das fotos, políticas sobre o `storage.objects` de verdade (com colunas e triggers reais).
-5. Privilégios padrão reais do Supabase: confirmar que o REVOKE remove o acesso de `anon`/`authenticated` lá também.
-6. Painel: produto `demo` não pode ser comprado; `compras_ativas` visível no admin (Etapa 8).
+5. Privilégios padrão reais do Supabase: confirmar que o REVOKE remove o acesso de `anon`/`authenticated` lá também. O `ALTER DEFAULT PRIVILEGES` vale para objetos criados pelo MESMO papel que rodou o script — a documentação do Supabase diz que o SQL Editor roda como `postgres`, mas isso NÃO foi verificado no ambiente real (teste 7 abaixo).
+6. Table Editor do painel: não sabemos se ele cria tabelas como `postgres` (protegidas) ou como outro papel (nesse caso as tabelas criadas pelo painel NÃO ficam cobertas — aplicar na mão: `enable row level security` + `revoke` + grants mínimos). Também não verificado no ambiente real (teste 7 abaixo).
+7. Painel: produto `demo` não pode ser comprado; `compras_ativas` visível no admin (Etapa 8).
 
 ## Bateria no Supabase (roteiro resumido, após aplicação)
 
@@ -152,6 +154,27 @@ Estes itens dependem do serviço de verdade e ficam para a validação pós-apli
 4. SQL Editor: repetir t10–t24 com um produto QA criado na hora (`demo=false`).
 5. Criar pedido de teste, envelhecer 49h, rodar `expirar_pedidos_pendentes()` → confere.
 6. Voltar `compras_ativas` para `false` e apagar o produto QA.
+7. Teste da tabela futura (valida o `ALTER DEFAULT PRIVILEGES`), no SQL Editor:
+
+   ```sql
+   create table public.teste_tabela_futura (id int);
+
+   select grantee, privilege_type
+   from information_schema.role_table_grants
+   where table_name = 'teste_tabela_futura'
+   order by grantee, privilege_type;
+   -- Esperado: só POSTGRES e SERVICE_ROLE. NENHUM anon/authenticated.
+
+   drop table public.teste_tabela_futura;
+   ```
+
+   Depois, fora do painel, `GET /rest/v1/teste_tabela_futura` com a chave
+   publicável → esperado 404/403, nunca 200 com dados.
+   E ainda: criar uma tabela pelo **Table Editor** do painel e repetir a
+   consulta acima (trocar o `table_name`). Se aparecerem `anon`/`authenticated`,
+   o painel cria com outro papel — nesse caso toda tabela do painel precisa
+   de proteção na mão: `alter table X enable row level security;` +
+   `revoke all on public.X from anon, authenticated;` + grants mínimos.
 
 ## Produto de teste QA (usar na validação no Supabase)
 
