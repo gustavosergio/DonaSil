@@ -1,7 +1,13 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import ProductCard from "@/components/ProductCard";
-import { produtosDemo } from "@/data/demo-produtos";
 import { linkWhatsApp } from "@/lib/whatsapp";
+import { MODO_DEMO } from "@/lib/site";
+import {
+  CatalogoErro,
+  listarDestaques,
+  type ProdutoResumo,
+} from "@/lib/catalogo";
 
 const MENSAGEM_ATENDIMENTO =
   "Olá! Vim pelo site da Dona Sil e gostaria de saber mais sobre as peças.";
@@ -96,17 +102,15 @@ export default function Home() {
             Ver tudo
           </Link>
         </div>
-        <ul className="mt-8 grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4">
-          {produtosDemo.map((produto) => (
-            <li key={produto.id}>
-              <ProductCard produto={produto} />
-            </li>
-          ))}
-        </ul>
-        <p className="mt-8 text-xs text-ink-soft">
-          Peças demonstrativas — nomes, preços e cores são exemplos até a
-          publicação oficial.
-        </p>
+        <Suspense fallback={<EsqueletoNovidades />}>
+          <Novidades />
+        </Suspense>
+        {MODO_DEMO && (
+          <p className="mt-8 text-xs text-ink-soft">
+            Peças demonstrativas — nomes, preços e cores são exemplos até a
+            publicação oficial.
+          </p>
+        )}
       </section>
 
       {/* Chamada para o WhatsApp */}
@@ -130,5 +134,69 @@ export default function Home() {
         </div>
       </section>
     </main>
+  );
+}
+
+// ------------------------------------------------------------
+// Novidades — produtos marcados como destaque no banco real
+// ------------------------------------------------------------
+
+async function Novidades() {
+  let produtos: ProdutoResumo[];
+  try {
+    produtos = await listarDestaques();
+  } catch (erro) {
+    return <AvisoNovidades erro={erro} />;
+  }
+
+  if (produtos.length === 0) {
+    return (
+      <p className="mt-8 text-sm text-ink-soft">
+        Em breve as peças em destaque da coleção aparecem aqui.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="mt-8 grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4">
+      {produtos.map((produto) => (
+        <li key={produto.id}>
+          <ProductCard produto={produto} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function AvisoNovidades({ erro }: { erro: unknown }) {
+  // Falha de consulta não vira "sem destaques".
+  const mensagem =
+    erro instanceof CatalogoErro
+      ? erro.message
+      : "Não foi possível carregar as novidades agora.";
+  return (
+    <p role="alert" className="mt-8 text-sm text-ink-soft">
+      {mensagem} Veja o catálogo completo.
+    </p>
+  );
+}
+
+function EsqueletoNovidades() {
+  return (
+    <ul
+      aria-hidden="true"
+      className="mt-8 grid animate-pulse grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4"
+    >
+      {Array.from({ length: 4 }).map((_, indice) => (
+        <li key={indice}>
+          <div className="aspect-[3/4] rounded-2xl bg-champagne" />
+          <div className="mt-3 space-y-2">
+            <div className="h-3 w-16 rounded-full bg-champagne" />
+            <div className="h-4 w-32 rounded-full bg-champagne" />
+            <div className="h-3 w-20 rounded-full bg-champagne" />
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
