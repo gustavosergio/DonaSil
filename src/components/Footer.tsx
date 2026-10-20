@@ -11,8 +11,8 @@ export default function Footer() {
             {site.nome}
           </p>
           <p className="mt-3 max-w-xs text-sm leading-6 text-ink-soft">
-            {site.tagline}. Atendimento próximo, do jeito que sempre foi —
-            agora também online.
+            Atendimento próximo, do jeito que sempre foi — agora
+            também online.
           </p>
         </div>
 
