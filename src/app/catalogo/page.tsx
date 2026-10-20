@@ -113,7 +113,7 @@ async function ConteudoCatalogo({ searchParams }: PropsConteudo) {
               aria-current={filtros.categoria === null ? "page" : undefined}
               className={
                 filtros.categoria === null
-                  ? "rounded-full border border-gold bg-gold px-4 py-2 text-sm font-medium text-ink"
+                  ? "rounded-full border border-gold bg-gold px-4 py-2 text-sm font-medium text-ink dark:text-[#2b2420]"
                   : "rounded-full border border-sand bg-ivory px-4 py-2 text-sm font-medium text-ink-soft transition hover:border-gold hover:text-gold-ink"
               }
             >
@@ -129,7 +129,7 @@ async function ConteudoCatalogo({ searchParams }: PropsConteudo) {
                 }
                 className={
                   filtros.categoria === categoria.slug
-                    ? "rounded-full border border-gold bg-gold px-4 py-2 text-sm font-medium text-ink"
+                    ? "rounded-full border border-gold bg-gold px-4 py-2 text-sm font-medium text-ink dark:text-[#2b2420]"
                     : "rounded-full border border-sand bg-ivory px-4 py-2 text-sm font-medium text-ink-soft transition hover:border-gold hover:text-gold-ink"
                 }
               >
@@ -163,7 +163,7 @@ async function ConteudoCatalogo({ searchParams }: PropsConteudo) {
         />
         <button
           type="submit"
-          className="rounded-full bg-gold px-5 py-2 text-sm font-medium text-ink transition hover:bg-gold-deep"
+          className="rounded-full bg-gold px-5 py-2 text-sm font-medium text-ink transition hover:bg-gold-deep dark:text-[#2b2420]"
         >
           Buscar
         </button>

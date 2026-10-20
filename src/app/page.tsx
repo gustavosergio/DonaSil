@@ -35,7 +35,7 @@ export default function Home() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/catalogo"
-                className="rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition hover:bg-gold-deep"
+                className="rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition hover:bg-gold-deep dark:text-[#2b2420]"
               >
                 Explorar o catálogo
               </Link>
@@ -58,7 +58,7 @@ export default function Home() {
             <div className="absolute inset-0 rotate-3 rounded-3xl bg-gold-soft/40" />
             <div className="absolute inset-0 -rotate-2 overflow-hidden rounded-3xl bg-sand">
               <div className="flex h-full items-end p-4">
-                <span className="rounded-full bg-white/85 px-3 py-1 text-xs text-ink-soft">
+                <span className="rounded-full bg-white/85 px-3 py-1 text-xs text-ink-soft dark:bg-ivory">
                   Fotos demonstrativas
                 </span>
               </div>
@@ -116,10 +116,10 @@ export default function Home() {
       {/* Chamada para o WhatsApp */}
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="rounded-3xl bg-gold px-6 py-14 text-center sm:px-12">
-          <h2 className="mx-auto max-w-2xl font-display text-2xl font-semibold text-ink sm:text-3xl">
+          <h2 className="mx-auto max-w-2xl font-display text-2xl font-semibold text-ink sm:text-3xl dark:text-[#2b2420]">
             Dúvidas sobre peças, tamanhos ou entregas?
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/70">
+          <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/70 dark:text-[#2b2420]/70">
             Fale com a gente pelo WhatsApp. Atendimento pessoal, do jeito que
             sempre foi na Dona Sil.
           </p>

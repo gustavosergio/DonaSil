@@ -1,11 +1,26 @@
 @import "tailwindcss";
 
+/* Modo escuro por CLASSE no <html> (html.dark), controlado pelo
+   botão AlternarTema + script anti-flash no layout raiz. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Fontes com "inline": cada valor APONTA para a variável criada
+   pelo next/font — o Tailwind embute essa referência direto nos
+   utilitários, sem criar variável intermediária. Esse é o uso
+   correto de inline (valores que são outras variáveis). */
 @theme inline {
   /* Tipografia */
   --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-playfair), ui-serif, Georgia, serif;
+}
 
-  /* Paleta Dona Sil */
+/* Cores SEM "inline": os utilitários (bg-cream, text-ink,
+   border-sand…) nascem como var(--color-…) e leem as variáveis
+   em tempo de execução. Assim o bloco html.dark abaixo troca a
+   paleta do site público e do painel inteiros — sem duplicar
+   estilo e sem dark: em cada componente. */
+@theme {
+  /* Paleta Dona Sil (modo claro) */
   --color-cream: #faf6f0;      /* fundo das páginas */
   --color-sand: #f0e8dd;       /* bordas suaves e divisórias */
   --color-ivory: #fffdf9;      /* cartões e superfícies */
@@ -18,6 +33,24 @@
   --color-ink-soft: #6b5f58;   /* texto secundário */
 }
 
+/* Modo escuro: os utilitários continuam os mesmos (bg-cream,
+   text-ink, border-sand…); só os VALORES das variáveis mudam. */
+html.dark {
+  --color-cream: #191410;      /* fundo das páginas */
+  --color-sand: #3a312a;      /* bordas suaves e divisórias */
+  --color-ivory: #221c17;     /* cartões e superfícies */
+  --color-champagne: #2b241d; /* destaque delicado */
+  --color-gold: #d3b585;      /* dourado claro (fundo de botões) */
+  --color-gold-deep: #e0c79b; /* hover: clareia no escuro */
+  --color-gold-soft: #8d7757; /* acento discreto */
+  --color-gold-ink: #d9bd92;  /* dourado claro para textos */
+  --color-ink: #f0e9df;       /* texto principal claro */
+  --color-ink-soft: #b3a89b;  /* texto secundário */
+
+  color-scheme: dark;
+}
+
 html {
   scroll-behavior: smooth;
+  color-scheme: light;
 }

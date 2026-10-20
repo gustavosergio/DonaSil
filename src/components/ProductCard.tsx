@@ -28,7 +28,7 @@ export default function ProductCard({ produto }: { produto: ProdutoResumo }) {
             Esgotado
           </span>
         )}
-        <div className="absolute bottom-3 left-3 rounded-full bg-white/85 px-3 py-1 text-xs text-ink-soft">
+        <div className="absolute bottom-3 left-3 rounded-full bg-white/85 px-3 py-1 text-xs text-ink-soft dark:bg-ivory">
           Foto demonstrativa
         </div>
       </div>
