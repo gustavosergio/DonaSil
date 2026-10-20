@@ -3,9 +3,37 @@
 import { useState } from "react";
 import Link from "next/link";
 import { linkWhatsApp } from "@/lib/whatsapp";
+import { useSacola } from "@/components/CarrinhoProvider";
+import AlternarTema from "@/components/AlternarTema";
 
 const MENSAGEM_ATENDIMENTO =
   "Olá! Vim pelo site da Dona Sil e gostaria de saber mais sobre as peças.";
+
+function LinkSacola({ aoNavegar }: { aoNavegar?: () => void }) {
+  const { carregado, unidades } = useSacola();
+
+  return (
+    <Link
+      href="/sacola"
+      onClick={aoNavegar}
+      aria-label={
+        carregado && unidades > 0
+          ? `Sacola (${unidades} ${unidades === 1 ? "peça" : "peças"})`
+          : "Sacola"
+      }
+      className="relative flex items-center gap-2 text-ink-soft transition hover:text-gold-ink"
+    >
+      Sacola
+      {/* O contador só aparece depois de o navegador ler a sacola
+          salva — a primeira renderização é igual à do servidor. */}
+      {carregado && unidades > 0 && (
+        <span className="rounded-full bg-ink px-2 py-0.5 text-xs font-semibold text-ivory">
+          {unidades}
+        </span>
+      )}
+    </Link>
+  );
+}
 
 export default function Header() {
   const [menuAberto, setMenuAberto] = useState(false);
@@ -31,39 +59,48 @@ export default function Header() {
           <Link href="/catalogo" className="text-ink-soft transition hover:text-gold-ink">
             Catálogo
           </Link>
+          <LinkSacola />
+          <AlternarTema />
           <a
             href={linkWhatsApp(MENSAGEM_ATENDIMENTO)}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full bg-gold px-5 py-2 text-ink transition hover:bg-gold-deep"
+            className="rounded-full bg-gold px-5 py-2 text-ink transition hover:bg-gold-deep dark:text-[#2b2420]"
           >
             WhatsApp
           </a>
         </nav>
 
-        <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition hover:bg-champagne sm:hidden"
-          aria-expanded={menuAberto}
-          aria-controls="menu-mobile"
-          aria-label={menuAberto ? "Fechar menu" : "Abrir menu"}
-          onClick={() => setMenuAberto((aberto) => !aberto)}
-        >
-          <svg
-            className="h-6 w-6"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            aria-hidden="true"
+        {/* Celular (<640px): tema e menu na mesma extremidade da
+            barra — o tema NÃO depende de o menu estar aberto.
+            No desktop (≥640px) o conjunto some: o tema já aparece
+            na navegação e o menu vira hambúrguer escondido. */}
+        <div className="flex items-center gap-1 sm:hidden">
+          <AlternarTema />
+          <button
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition hover:bg-champagne"
+            aria-expanded={menuAberto}
+            aria-controls="menu-mobile"
+            aria-label={menuAberto ? "Fechar menu" : "Abrir menu"}
+            onClick={() => setMenuAberto((aberto) => !aberto)}
           >
-            {menuAberto ? (
-              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-            ) : (
-              <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
-            )}
-          </svg>
-        </button>
+            <svg
+              className="h-6 w-6"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
+              {menuAberto ? (
+                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+              ) : (
+                <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
+              )}
+            </svg>
+          </button>
+        </div>
       </div>
 
       {menuAberto && (
@@ -91,12 +128,17 @@ export default function Header() {
                 Catálogo
               </Link>
             </li>
+            <li>
+              <div className="rounded-lg px-3 py-3 transition hover:bg-champagne">
+                <LinkSacola aoNavegar={() => setMenuAberto(false)} />
+              </div>
+            </li>
             <li className="mt-2">
               <a
                 href={linkWhatsApp(MENSAGEM_ATENDIMENTO)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block rounded-full bg-gold px-5 py-3 text-center text-ink transition hover:bg-gold-deep"
+                className="block rounded-full bg-gold px-5 py-3 text-center text-ink transition hover:bg-gold-deep dark:text-[#2b2420]"
               >
                 Falar no WhatsApp
               </a>

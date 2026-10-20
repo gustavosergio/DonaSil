@@ -3,12 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { formatarBRL } from "@/lib/format";
-import {
-  CatalogoErro,
-  obterProduto,
-  type ProdutoCompleto,
-  type VariacaoEstoque,
-} from "@/lib/catalogo";
+import { CatalogoErro, obterProduto, type ProdutoCompleto } from "@/lib/catalogo";
+import AdicionarASacola from "@/components/AdicionarASacola";
 
 type Props = PageProps<"/catalogo/[slug]">;
 
@@ -133,14 +129,17 @@ async function DetalheProduto({ params }: Pick<Props, "params">) {
 
         {produto.variacoes.length > 0 && (
           <div className="mt-7">
-            <p className="text-sm font-semibold text-ink">
-              Tamanhos e cores
-            </p>
-            <ul className="mt-3 divide-y divide-sand rounded-2xl border border-sand bg-ivory">
-              {produto.variacoes.map((variacao) => (
-                <LinhaVariacao key={variacao.id} variacao={variacao} />
-              ))}
-            </ul>
+            {/* Ilha cliente: seleciona tamanho/cor (estoque real do
+                banco) e adiciona à sacola do navegador. Variações
+                esgotadas ficam visíveis, porém desabilitadas. */}
+            <AdicionarASacola
+              produto={{
+                slug: produto.slug,
+                nome: produto.nome,
+                preco: produto.preco,
+              }}
+              variacoes={produto.variacoes}
+            />
           </div>
         )}
 
@@ -162,29 +161,6 @@ async function DetalheProduto({ params }: Pick<Props, "params">) {
         )}
       </div>
     </div>
-  );
-}
-
-function LinhaVariacao({ variacao }: { variacao: VariacaoEstoque }) {
-  const disponivel = variacao.quantidade > 0;
-  return (
-    <li className="flex items-center justify-between gap-3 px-4 py-3">
-      <span className="flex items-center gap-2 text-sm text-ink">
-        <span
-          aria-hidden="true"
-          className="h-3.5 w-3.5 rounded-full border border-black/10"
-          style={{ backgroundColor: variacao.corHex }}
-        />
-        {variacao.tamanho} — {variacao.cor}
-      </span>
-      {disponivel ? (
-        <span className="text-xs text-ink-soft">Disponível</span>
-      ) : (
-        <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium text-ink-soft">
-          Indisponível
-        </span>
-      )}
-    </li>
   );
 }
 
