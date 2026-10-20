@@ -44,6 +44,8 @@ yarn-error.log*
 
 # supabase
 supabase/.temp/
+# Relatório de segurança — auditoria interna, NUNCA commitar
+supabase/RELATORIO-SEGURANCA.md
 
 # typescript
 *.tsbuildinfo
