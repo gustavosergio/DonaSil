@@ -137,3 +137,97 @@ export const listarFaixasFrete = cache(async (): Promise<FaixaFrete[]> => {
     valor: faixa.valor,
   }));
 });
+
+// ------------------------------------------------------------
+// Regras comerciais de frete (decisão de negócio da loja)
+// ------------------------------------------------------------
+// Tarifas FIXAS por região — não variam com o custo do serviço
+// de entrega (a loja absorve eventuais diferenças). Nomes neutros:
+// nenhum fornecedor logístico é citado para as clientes.
+//
+// Contrato FAIL-CLOSED: o servidor só aceita uma faixa cujo nome
+// esteja nesta lista canônica — faixa renomeada ou inédita no
+// banco bloqueia a finalização com erro claro, nunca cobra um
+// valor "por aproximação". Para mudar uma tarifa, atualize o
+// banco (supabase/atualizar-fretes.sql) e estas constantes JUNTOS.
+// ------------------------------------------------------------
+
+export const FAIXA_ZONA_NORTE = "Recife — Zona Norte";
+export const FAIXA_ZONA_SUL = "Recife — Zona Sul";
+export const FAIXA_RMR = "Região Metropolitana do Recife";
+export const FAIXA_INTERIOR_PE = "Interior de Pernambuco";
+export const FAIXA_OUTROS_ESTADOS = "Outros estados";
+export const FAIXA_RETIRADA_NO_LOCAL =
+  "Retirada no local — endereço combinado pelo WhatsApp";
+
+const FAIXAS_CONHECIDAS: ReadonlySet<string> = new Set([
+  FAIXA_ZONA_NORTE,
+  FAIXA_ZONA_SUL,
+  FAIXA_RMR,
+  FAIXA_INTERIOR_PE,
+  FAIXA_OUTROS_ESTADOS,
+  FAIXA_RETIRADA_NO_LOCAL,
+]);
+
+/**
+ * R$ 129,99 em centavos. Frete GRÁTIS para ENTREGAS quando o
+ * subtotal dos produtos é ESTRITAMENTE maior que este valor
+ * (R$ 129,99 paga a tarifa regional; R$ 130,00 já é grátis).
+ * A retirada no local é gratuita em qualquer subtotal pela
+ * própria tarifa zero cadastrada no banco.
+ */
+export const LIMITE_FRETE_GRATIS_CENTAVOS = 12_999;
+
+/** Converte um valor em reais para centavos (inteiro exato). */
+export function paraCentavos(valor: number): number {
+  return Math.round(valor * 100);
+}
+
+export type FreteAplicado = {
+  /** Valor final cobrado (0 = grátis). */
+  valor: number;
+  /** true quando o frete foi zerado pela regra do subtotal. */
+  gratis: boolean;
+};
+
+/**
+ * Regra central de frete — aplicada SEMPRE no servidor. O subtotal
+ * entra em CENTAVOS inteiros (Σ paraCentavos(preço) × quantidade):
+ * aritmética inteira, sem erro de ponto flutuante na fronteira.
+ */
+export function calcularFreteAplicado(
+  subtotalCentavos: number,
+  faixa: FaixaFrete,
+): FreteAplicado {
+  if (subtotalCentavos > LIMITE_FRETE_GRATIS_CENTAVOS) {
+    return { valor: 0, gratis: true };
+  }
+  return { valor: faixa.valor, gratis: false };
+}
+
+/** O nome da faixa está na lista canônica conhecida pelo código? */
+export function faixaConhecida(nome: string): boolean {
+  return FAIXAS_CONHECIDAS.has(nome);
+}
+
+/**
+ * A região combina com a UF informada?
+ *   * Recife — Zona Norte, Recife — Zona Sul, Região
+ *     Metropolitana do Recife e Interior de Pernambuco: UF = PE.
+ *   * Outros estados: UF ≠ PE.
+ *   * Retirada no local: QUALQUER UF (a cliente combina a
+ *     retirada com o atendimento pelo WhatsApp).
+ * Nome desconhecido = incompatível (fail-closed).
+ */
+export function regiaoCompativelComUf(nome: string, uf: string): boolean {
+  if (!faixaConhecida(nome)) return false;
+  const ufNormalizada = uf.trim().toUpperCase();
+  if (nome === FAIXA_RETIRADA_NO_LOCAL) return true;
+  if (nome === FAIXA_OUTROS_ESTADOS) return ufNormalizada !== "PE";
+  return ufNormalizada === "PE";
+}
+
+/** É a faixa canônica de retirada no local? */
+export function retiradaNoLocal(nome: string): boolean {
+  return nome === FAIXA_RETIRADA_NO_LOCAL;
+}

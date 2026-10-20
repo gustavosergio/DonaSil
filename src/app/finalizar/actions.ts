@@ -21,7 +21,15 @@
 // ============================================================
 
 import { CatalogoErro, obterProduto } from "@/lib/catalogo";
-import { FreteErro, listarFaixasFrete } from "@/lib/frete";
+import {
+  FreteErro,
+  calcularFreteAplicado,
+  faixaConhecida,
+  listarFaixasFrete,
+  paraCentavos,
+  regiaoCompativelComUf,
+  retiradaNoLocal,
+} from "@/lib/frete";
 import { linkWhatsApp } from "@/lib/whatsapp";
 import {
   agruparPorVariacao,
@@ -183,6 +191,30 @@ export async function prepararPedido(
     };
   }
 
+  // Fail-closed: além de ativa (lista acima), a faixa precisa ter
+  // nome CONHECIDO pelo código (lista canônica) e ser COMPATÍVEL
+  // com a UF informada. Faixa renomeada/inédita no banco, ou região
+  // incompatível com o estado, BLOQUEIAM a finalização com erro
+  // claro — nunca se cobra um valor "por aproximação". A retirada
+  // no local vale para qualquer UF.
+  if (!faixaConhecida(faixa.nome)) {
+    return {
+      ok: false,
+      errosCampos: {
+        faixaFreteId:
+          "Esta região de entrega não está disponível agora. Tente novamente em instantes.",
+      },
+    };
+  }
+  if (!regiaoCompativelComUf(faixa.nome, entrega.data.uf)) {
+    return {
+      ok: false,
+      errosCampos: {
+        faixaFreteId: "A região escolhida não corresponde ao estado informado.",
+      },
+    };
+  }
+
   // ---------------------------------------------------------
   // 5) Resumo com valores reais + link do WhatsApp OFICIAL.
   //    Nenhum pedido é registrado nesta etapa.
@@ -191,11 +223,21 @@ export async function prepararPedido(
     (total, item) => total + item.precoUnitario * item.quantidade,
     0,
   );
+  // Frete grátis: a comparação usa o subtotal dos produtos em
+  // CENTAVOS inteiros — R$ 129,99 paga a tarifa; R$ 130,00 é
+  // grátis. A retirada no local é gratuita pela própria tarifa
+  // zero do banco, em qualquer subtotal.
+  const subtotalCentavos = itensResumo.reduce(
+    (total, item) => total + paraCentavos(item.precoUnitario) * item.quantidade,
+    0,
+  );
+  const freteAplicado = calcularFreteAplicado(subtotalCentavos, faixa);
   const resumo: ResumoPedido = {
     itens: itensResumo,
     subtotal,
-    frete: { id: faixa.id, nome: faixa.nome, valor: faixa.valor },
-    total: subtotal + faixa.valor,
+    frete: { id: faixa.id, nome: faixa.nome, valor: freteAplicado.valor },
+    retirada: retiradaNoLocal(faixa.nome),
+    total: subtotal + freteAplicado.valor,
     entrega: entrega.data,
     mensagemWhatsApp: "",
   };

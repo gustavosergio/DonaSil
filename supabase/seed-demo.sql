@@ -40,11 +40,16 @@ insert into public.categorias (nome, slug, ordem) values
   ('Acessórios', 'acessorios', 5)
 on conflict do nothing;
 
--- FAIXAS DE FRETE (valores FICTÍCIOS — trocados na Etapa 10)
+-- FAIXAS DE FRETE (tarifas comerciais oficiais — valores fixos por
+-- região; a retirada é no local do estoque, combinada pelo
+-- WhatsApp, e o endereço nunca é publicado no site)
 insert into public.faixas_frete (nome, valor, ordem) values
-  ('Região Metropolitana do Recife (demo)', 15.00, 1),
-  ('Interior de Pernambuco (demo)',         25.00, 2),
-  ('Outros estados (demo)',                 39.90, 3)
+  ('Recife — Zona Norte',    9.99, 1),
+  ('Recife — Zona Sul',     19.99, 2),
+  ('Região Metropolitana do Recife', 29.99, 3),
+  ('Interior de Pernambuco',        29.99, 4),
+  ('Outros estados',                34.99, 5),
+  ('Retirada no local — endereço combinado pelo WhatsApp', 0.00, 6)
 on conflict do nothing;
 
 -- ============================================================

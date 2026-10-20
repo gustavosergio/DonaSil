@@ -14,9 +14,10 @@
 //   * O limite de 10 vale TAMBÉM na soma de linhas repetidas
 //     da mesma variação (passo 4b) — dividir o item em várias
 //     linhas não contorna o limite.
-//   * Campos da entrega: nome (≤200), whatsapp (≤30), cep (≤20),
-//     endereco (≤300), complemento (≤200), bairro (≤120),
-//     cidade (≤120), uf (2 letras maiúsculas).
+//   * Campos da entrega: nome (≤200), whatsapp (≤30), cep
+//     (formato 00000-000, hífen opcional), endereco (≤300),
+//     complemento (≤200), bairro (≤120), cidade (≤120),
+//     uf (2 letras maiúsculas).
 //   * O navegador envia apenas (variacao_id, quantidade).
 //     Preço e frete NUNCA vêm do navegador.
 //
@@ -313,7 +314,11 @@ export const dadosEntregaSchema = z.object({
     .string()
     .trim()
     .min(1, "Informe o CEP.")
-    .max(20, "O CEP é muito longo."),
+    .max(20, "O CEP é muito longo.")
+    // Somente FORMATO — o CEP nunca é usado para deduzir a região
+    // de entrega (a cliente escolhe a região; o servidor confere
+    // a compatibilidade com a UF).
+    .regex(/^\d{5}-?\d{3}$/, "CEP inválido — use o formato 00000-000."),
   endereco: z
     .string()
     .trim()
@@ -453,11 +458,15 @@ export type ItemResumo = {
 };
 
 /** Resumo pronto para conferência da cliente. `mensagemWhatsApp`
- *  é o texto do atendimento; `total` = subtotal + frete. */
+ *  é o texto do atendimento; `total` = subtotal + frete.
+ *  `retirada` = true quando a faixa escolhida é a retirada no
+ *  local: o endereço NÃO vai no resumo nem na mensagem — o
+ *  local é combinado pelo atendimento no WhatsApp. */
 export type ResumoPedido = {
   itens: ItemResumo[];
   subtotal: number;
   frete: { id: string; nome: string; valor: number };
+  retirada: boolean;
   total: number;
   entrega: DadosEntrega;
   mensagemWhatsApp: string;
@@ -477,32 +486,50 @@ export function montarMensagemWhatsApp(resumo: ResumoPedido): string {
       `${formatarMoeda(item.quantidade * item.precoUnitario)}`,
   );
 
-  const endereco = [
-    resumo.entrega.endereco,
-    resumo.entrega.complemento,
-    resumo.entrega.bairro,
-  ]
-    .filter((parte) => parte.length > 0)
-    .join(" — ");
+  // Frete zero = "Grátis" (regra do subtotal ou retirada no local).
+  const freteTexto =
+    resumo.frete.valor === 0 ? "Grátis" : formatarMoeda(resumo.frete.valor);
 
-  return [
+  const linhas: string[] = [
     "Olá! Gostaria de fazer um pedido pelo site da Dona Sil.",
     "",
     "Peças:",
     ...pecas,
     "",
     `Subtotal: ${formatarMoeda(resumo.subtotal)}`,
-    `Frete (${resumo.frete.nome}): ${formatarMoeda(resumo.frete.valor)}`,
+    `Frete (${resumo.frete.nome}): ${freteTexto}`,
     `Total: ${formatarMoeda(resumo.total)}`,
     "",
     "Entrega:",
-    resumo.entrega.nome,
-    endereco,
-    `${resumo.entrega.cidade} — ${resumo.entrega.uf}`,
-    `CEP ${resumo.entrega.cep}`,
+  ];
+
+  if (resumo.retirada) {
+    // Retirada: NADA do endereço (da cliente ou do estoque) vai na
+    // mensagem — o local é combinado pelo atendimento no WhatsApp.
+    linhas.push("Retirada no local — endereço a combinar");
+  } else {
+    const endereco = [
+      resumo.entrega.endereco,
+      resumo.entrega.complemento,
+      resumo.entrega.bairro,
+    ]
+      .filter((parte) => parte.length > 0)
+      .join(" — ");
+
+    linhas.push(
+      resumo.entrega.nome,
+      endereco,
+      `${resumo.entrega.cidade} — ${resumo.entrega.uf}`,
+      `CEP ${resumo.entrega.cep}`,
+    );
+  }
+
+  linhas.push(
     "",
     "Enviado pelo site da Dona Sil. Aguardo a confirmação do atendimento.",
-  ].join("\n");
+  );
+
+  return linhas.join("\n");
 }
 
 /**

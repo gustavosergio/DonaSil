@@ -198,7 +198,9 @@ export default function FinalizarPedido({ faixas }: Props) {
               Frete ({resumo.frete.nome})
             </dt>
             <dd className="font-medium text-ink">
-              {formatarBRL(resumo.frete.valor)}
+              {resumo.frete.valor === 0
+                ? "Grátis"
+                : formatarBRL(resumo.frete.valor)}
             </dd>
           </div>
           <div className="flex items-center justify-between border-t border-sand pt-3">
@@ -211,18 +213,26 @@ export default function FinalizarPedido({ faixas }: Props) {
 
         <div className="mt-6 rounded-2xl bg-cream px-4 py-4 text-sm leading-7 text-ink-soft">
           <p className="font-semibold text-ink">Entrega</p>
-          <p className="mt-1">
-            {resumo.entrega.nome}
-            <br />
-            {resumo.entrega.endereco}
-            {resumo.entrega.complemento
-              ? ` — ${resumo.entrega.complemento}`
-              : ""}
-            {resumo.entrega.bairro ? ` — ${resumo.entrega.bairro}` : ""}
-            <br />
-            {resumo.entrega.cidade} — {resumo.entrega.uf} · CEP{" "}
-            {resumo.entrega.cep}
-          </p>
+          {resumo.retirada ? (
+            // Retirada: nada do endereço (da cliente ou do estoque)
+            // aparece — o local é combinado pelo WhatsApp.
+            <p className="mt-1 text-ink">
+              Retirada no local — endereço a combinar
+            </p>
+          ) : (
+            <p className="mt-1">
+              {resumo.entrega.nome}
+              <br />
+              {resumo.entrega.endereco}
+              {resumo.entrega.complemento
+                ? ` — ${resumo.entrega.complemento}`
+                : ""}
+              {resumo.entrega.bairro ? ` — ${resumo.entrega.bairro}` : ""}
+              <br />
+              {resumo.entrega.cidade} — {resumo.entrega.uf} · CEP{" "}
+              {resumo.entrega.cep}
+            </p>
+          )}
         </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -474,7 +484,9 @@ export default function FinalizarPedido({ faixas }: Props) {
             </p>
           )}
           <p className="mt-3 text-xs leading-6 text-ink-soft">
-            O valor do frete é confirmado pelo servidor no envio.
+            Pedidos acima de R$ 129,99 têm frete grátis para
+            entregas. O valor do frete é confirmado pelo servidor no
+            envio.
           </p>
         </fieldset>
       </section>
