@@ -106,9 +106,17 @@ export default function FinalizarPedido({ faixas }: Props) {
   const problemas =
     resultado && !resultado.ok ? (resultado.problemas ?? []) : [];
 
+  // Dados da última conferência bem-sucedida. Ao clicar em "Editar
+  // dados" o formulário é remontado — sem isto, os campos voltariam
+  // vazios e a cliente teria que digitar tudo de novo.
+  const entregaAnterior = resultado?.ok ? resultado.resumo.entrega : null;
+
   // Confirmação: só aparece quando a conferência deu certo e a
-  // cliente não está editando os dados.
-  if (resultado?.ok && !editando) {
+  // cliente não está editando os dados. Durante uma reconferência
+  // (`enviando`), o resumo antigo fica ESCONDIDO — senão a
+  // cliente poderia enviar pelo WhatsApp um resumo desatualizado
+  // antes de o servidor devolver os valores novos.
+  if (resultado?.ok && !editando && !enviando) {
     const { resumo, urlWhatsApp } = resultado;
     // A sacola pode ter mudado (outra aba, botão voltar...):
     // se mudou, o resumo antigo fica desatualizado — avisar.
@@ -335,6 +343,7 @@ export default function FinalizarPedido({ faixas }: Props) {
             required
             maxLength={200}
             autoComplete="name"
+            defaultValue={entregaAnterior?.nome}
           />
           <Campo
             rotulo="WhatsApp (com DDD)"
@@ -346,6 +355,7 @@ export default function FinalizarPedido({ faixas }: Props) {
             required
             maxLength={30}
             autoComplete="tel"
+            defaultValue={entregaAnterior?.whatsapp}
           />
           <Campo
             rotulo="CEP"
@@ -356,6 +366,7 @@ export default function FinalizarPedido({ faixas }: Props) {
             required
             maxLength={20}
             autoComplete="postal-code"
+            defaultValue={entregaAnterior?.cep}
           />
           <Campo
             rotulo="Cidade"
@@ -364,6 +375,7 @@ export default function FinalizarPedido({ faixas }: Props) {
             required
             maxLength={120}
             autoComplete="address-level2"
+            defaultValue={entregaAnterior?.cidade}
           />
         </div>
 
@@ -375,6 +387,7 @@ export default function FinalizarPedido({ faixas }: Props) {
             required
             maxLength={300}
             autoComplete="address-line1"
+            defaultValue={entregaAnterior?.endereco}
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <Campo
@@ -385,6 +398,7 @@ export default function FinalizarPedido({ faixas }: Props) {
               maxLength={200}
               placeholder="Apto, bloco, referência…"
               autoComplete="address-line2"
+              defaultValue={entregaAnterior?.complemento}
             />
             <Campo
               rotulo="Bairro"
@@ -393,6 +407,7 @@ export default function FinalizarPedido({ faixas }: Props) {
               opcional
               maxLength={120}
               autoComplete="address-level3"
+              defaultValue={entregaAnterior?.bairro}
             />
           </div>
           <div className="sm:w-40">
@@ -408,6 +423,7 @@ export default function FinalizarPedido({ faixas }: Props) {
               autoCapitalize="characters"
               className="uppercase"
               autoComplete="address-level1"
+              defaultValue={entregaAnterior?.uf}
             />
           </div>
         </div>
@@ -433,7 +449,11 @@ export default function FinalizarPedido({ faixas }: Props) {
                       name="faixaFreteId"
                       value={faixa.id}
                       required
-                      defaultChecked={indice === 0}
+                      defaultChecked={
+                        entregaAnterior
+                          ? entregaAnterior.faixaFreteId === faixa.id
+                          : indice === 0
+                      }
                       className="h-4 w-4 accent-gold"
                     />
                     {faixa.nome}
