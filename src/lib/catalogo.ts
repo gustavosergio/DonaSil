@@ -401,3 +401,67 @@ export const obterProduto = cache(async (slug: string): Promise<ProdutoCompleto 
   if (linhas.length === 0) return null;
   return paraCompleto(linhas[0]);
 });
+
+// ------------------------------------------------------------
+// Cores e tamanhos existentes nas variações reais da loja
+// (fonte dos seletores do painel — nada é inventado aqui)
+// ------------------------------------------------------------
+
+export type OpcoesVariacao = {
+  cores: CorPeca[];
+  tamanhos: string[];
+};
+
+const variacaoOpcaoSchema = z.object({
+  cor: z.string().min(1),
+  cor_hex: z.string().min(1),
+  tamanho: z.string().min(1),
+});
+
+/** Ordem de exibição dos tamanhos comuns; valores fora dela
+ *  entram depois, em ordem alfabética (só apresentação). */
+const ORDEM_TAMANHOS = ["PP", "P", "M", "G", "GG", "XG", "XGG", "Único"];
+
+function ordenarTamanhos(a: string, b: string): number {
+  const ia = ORDEM_TAMANHOS.indexOf(a);
+  const ib = ORDEM_TAMANHOS.indexOf(b);
+  if (ia !== -1 && ib !== -1) return ia - ib;
+  if (ia !== -1) return -1;
+  if (ib !== -1) return 1;
+  return a.localeCompare(b, "pt-BR");
+}
+
+/**
+ * Cores e tamanhos que existem hoje nas variações reais do
+ * catálogo (leitura pública, a mesma fonte da loja). O painel usa
+ * esta lista nos seletores de cadastro/edição: o painel só oferece
+ * opções que já existem no banco — nenhuma é criada aqui.
+ */
+export async function listarOpcoesVariacoes(): Promise<OpcoesVariacao> {
+  const params = new URLSearchParams({
+    select: "cor,cor_hex,tamanho",
+    order: "cor.asc,tamanho.asc",
+  });
+  const linhas = await consultar(
+    "variacoes",
+    params,
+    z.array(variacaoOpcaoSchema),
+  );
+
+  const cores: CorPeca[] = [];
+  const vistas = new Set<string>();
+  const tamanhos = new Set<string>();
+  for (const linha of linhas) {
+    if (!vistas.has(linha.cor)) {
+      vistas.add(linha.cor);
+      cores.push({ nome: linha.cor, hex: linha.cor_hex });
+    }
+    tamanhos.add(linha.tamanho);
+  }
+
+  cores.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  return {
+    cores,
+    tamanhos: [...tamanhos].sort(ordenarTamanhos),
+  };
+}
