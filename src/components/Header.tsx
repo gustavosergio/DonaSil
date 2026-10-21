@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { linkWhatsApp } from "@/lib/whatsapp";
 import { useSacola } from "@/components/CarrinhoProvider";
@@ -12,21 +12,36 @@ const MENSAGEM_ATENDIMENTO =
 function LinkSacola({ aoNavegar }: { aoNavegar?: () => void }) {
   const { carregado, unidades } = useSacola();
 
+  // `pronto` não é estado — é o "estou no navegador?" canônico do
+  // React: durante a SSR e a hidratação deste componente vale o
+  // snapshot do servidor (false) e só depois da montagem passa a
+  // ler o do cliente (true). Assim o badge e o aria-label têm
+  // sempre o mesmo valor inicial nos dois lados, mesmo que o
+  // efeito do CarrinhoProvider (leitura do localStorage) tenha
+  // rodado antes de este trecho hidratar — o Header desce de um
+  // limite de Suspense transmitido em streaming. (Sem setState em
+  // efeito — regra react-hooks/set-state-in-effect.)
+  const pronto = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+
+  const comContador = pronto && carregado && unidades > 0;
+
   return (
     <Link
       href="/sacola"
       onClick={aoNavegar}
       aria-label={
-        carregado && unidades > 0
+        comContador
           ? `Sacola (${unidades} ${unidades === 1 ? "peça" : "peças"})`
           : "Sacola"
       }
       className="relative flex items-center gap-2 text-ink-soft transition hover:text-gold-ink"
     >
       Sacola
-      {/* O contador só aparece depois de o navegador ler a sacola
-          salva — a primeira renderização é igual à do servidor. */}
-      {carregado && unidades > 0 && (
+      {comContador && (
         <span className="rounded-full bg-ink px-2 py-0.5 text-xs font-semibold text-ivory">
           {unidades}
         </span>
