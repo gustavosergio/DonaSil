@@ -20,9 +20,24 @@
 // ============================================================
 
 import Link from "next/link";
-import { useActionState, useState, type ComponentProps } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ComponentProps,
+} from "react";
+import { consultarCep, normalizarCep } from "@/lib/cep";
 import { formatarBRL } from "@/lib/format";
 import type { FaixaFrete } from "@/lib/frete";
+import {
+  formatarCep,
+  formatarTelefone,
+  indiceAposDigitos,
+  soDigitos,
+} from "@/lib/mascaras";
+import type { DadosEntrega } from "@/lib/pedido";
 import { useSacola } from "@/components/CarrinhoProvider";
 import {
   prepararPedido,
@@ -345,98 +360,10 @@ export default function FinalizarPedido({ faixas }: Props) {
           Entrega
         </h2>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Campo
-            rotulo="Nome completo"
-            nome="nome"
-            erro={errosCampos.nome}
-            required
-            maxLength={200}
-            autoComplete="name"
-            defaultValue={entregaAnterior?.nome}
-          />
-          <Campo
-            rotulo="WhatsApp (com DDD)"
-            nome="whatsapp"
-            erro={errosCampos.whatsapp}
-            type="tel"
-            inputMode="tel"
-            placeholder="81 99999-8888"
-            required
-            maxLength={30}
-            autoComplete="tel"
-            defaultValue={entregaAnterior?.whatsapp}
-          />
-          <Campo
-            rotulo="CEP"
-            nome="cep"
-            erro={errosCampos.cep}
-            inputMode="numeric"
-            placeholder="52000-000"
-            required
-            maxLength={20}
-            autoComplete="postal-code"
-            defaultValue={entregaAnterior?.cep}
-          />
-          <Campo
-            rotulo="Cidade"
-            nome="cidade"
-            erro={errosCampos.cidade}
-            required
-            maxLength={120}
-            autoComplete="address-level2"
-            defaultValue={entregaAnterior?.cidade}
-          />
-        </div>
-
-        <div className="mt-4 grid gap-4">
-          <Campo
-            rotulo="Endereço (rua e número)"
-            nome="endereco"
-            erro={errosCampos.endereco}
-            required
-            maxLength={300}
-            autoComplete="address-line1"
-            defaultValue={entregaAnterior?.endereco}
-          />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Campo
-              rotulo="Complemento"
-              nome="complemento"
-              erro={errosCampos.complemento}
-              opcional
-              maxLength={200}
-              placeholder="Apto, bloco, referência…"
-              autoComplete="address-line2"
-              defaultValue={entregaAnterior?.complemento}
-            />
-            <Campo
-              rotulo="Bairro"
-              nome="bairro"
-              erro={errosCampos.bairro}
-              opcional
-              maxLength={120}
-              autoComplete="address-level3"
-              defaultValue={entregaAnterior?.bairro}
-            />
-          </div>
-          <div className="sm:w-40">
-            <Campo
-              rotulo="UF"
-              nome="uf"
-              erro={errosCampos.uf}
-              required
-              maxLength={2}
-              pattern="[A-Za-z]{2}"
-              title="Duas letras (ex.: PE)"
-              placeholder="PE"
-              autoCapitalize="characters"
-              className="uppercase"
-              autoComplete="address-level1"
-              defaultValue={entregaAnterior?.uf}
-            />
-          </div>
-        </div>
+        <CamposEntrega
+          entregaAnterior={entregaAnterior}
+          errosCampos={errosCampos}
+        />
 
         {/* 3) Região de frete — valores do banco, via servidor */}
         <fieldset className="mt-6">
@@ -563,5 +490,350 @@ function Campo({ rotulo, nome, erro, opcional, ...resto }: CampoProps) {
         </p>
       )}
     </div>
+  );
+}
+
+// ------------------------------------------------------------
+// Dados da entrega (contato + endereço) com autopreenchimento
+// pelo CEP (ViaCEP — camada em src/lib/cep.ts)
+//
+// Por que um componente PRÓPRIO dentro do formulário:
+//   * o formulário REMONTA quando a cliente volta de "Editar
+//     dados" — este componente remonta junto, e o estado nasce
+//     do `entregaAnterior` (a mesma semântica do defaultValue
+//     que vigorava antes);
+//   * os campos que o CEP pode preencher (cep, cidade, endereco,
+//     bairro, uf) são CONTROLADOS — e o WhatsApp também, por causa
+//     da máscara de digitação (CEP 00000-000; telefone (81)
+//     92222-8888 — ver src/lib/mascaras.ts). Nome e Complemento
+//     seguem não controlados — nem o autopreenchimento nem a
+//     máscara os toca: número da residência e complemento são da
+//     cliente.
+//
+// A consulta acontece SOMENTE com o CEP completo (8 dígitos),
+// nunca a cada tecla; respostas de consultas anteriores são
+// descartadas pela ordem; campo que a cliente já digitou nunca
+// é sobrescrito.
+// ------------------------------------------------------------
+
+type CamposAutofill = "endereco" | "bairro" | "cidade" | "uf";
+
+type StatusCep =
+  | "parado"
+  | "buscando"
+  | "preenchido"
+  | "nao_encontrado"
+  | "falha";
+
+type PropsCamposEntrega = {
+  entregaAnterior: DadosEntrega | null;
+  errosCampos: Record<string, string>;
+};
+
+const MENSAGENS_CEP: Record<Exclude<StatusCep, "parado">, string> = {
+  buscando: "Buscando endereço…",
+  preenchido: "Endereço encontrado — confira e complete o número.",
+  nao_encontrado: "CEP não encontrado — preencha o endereço manualmente.",
+  falha: "Não foi possível consultar o CEP agora — preencha o endereço manualmente.",
+};
+
+function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
+  // Campos que o CEP preenche — controlados; o valor inicial é o
+  // da última conferência confirmada (entregaAnterior), já com a
+  // máscara aplicada (valor antigo pode vir sem formatação).
+  const [cep, setCep] = useState(formatarCep(entregaAnterior?.cep ?? ""));
+  // WhatsApp: agora controlado, por causa da máscara de digitação.
+  const [whatsapp, setWhatsapp] = useState(
+    formatarTelefone(entregaAnterior?.whatsapp ?? ""),
+  );
+  const [cidade, setCidade] = useState(entregaAnterior?.cidade ?? "");
+  const [endereco, setEndereco] = useState(entregaAnterior?.endereco ?? "");
+  const [bairro, setBairro] = useState(entregaAnterior?.bairro ?? "");
+  const [uf, setUf] = useState(entregaAnterior?.uf ?? "");
+  const [statusCep, setStatusCep] = useState<StatusCep>("parado");
+
+  // Ref (não estado): precisa estar SEMPRE atualizado quando a
+  // resposta chegar — se fosse estado, a resposta enxergaria um
+  // valor antigo (closure) e poderia sobrescrever campo que a
+  // cliente acabou de digitar manualmente.
+  const camposEditados = useRef<Record<CamposAutofill, boolean>>({
+    endereco: false,
+    bairro: false,
+    cidade: false,
+    uf: false,
+  });
+
+  // Ordem da consulta em andamento: resposta de CEP que a cliente
+  // já trocou por outro é descartada em silêncio.
+  const ordemConsulta = useRef(0);
+
+  // Cursor dos campos mascarados: depois de reformatar, a posição
+  // é recalculada em cima dos DÍGITOS (hífen e parênteses ocupam
+  // índices que o cursor não pode "comer").
+  const refCep = useRef<HTMLInputElement | null>(null);
+  const refWhatsapp = useRef<HTMLInputElement | null>(null);
+  const cursorPendente = useRef<{
+    campo: "cep" | "whatsapp";
+    posicao: number;
+  } | null>(null);
+
+  /**
+   * Máscara de digitação (CEP/telefone). Devolve o valor JÁ
+   * FORMATADO. Dois caminhos:
+   *   * estado MUDA → o React re-renderiza com o valor formatado;
+   *     o cursor é recolocado DEPOIS da renderização (efeito
+   *     abaixo), porque atualizar o value do input empurra o
+   *     cursor para o fim;
+   *   * estado IGUAL (backspace em cima do hífen, caractere
+   *     rejeitado, colagem que formatou igual) → o React NÃO
+   *     re-renderiza; formatação e cursor são aplicados direto
+   *     no DOM, aqui mesmo — sem isto, o input ficaria com o
+   *     valor cru.
+   */
+  function mascararDigitacao(
+    evento: ChangeEvent<HTMLInputElement>,
+    formatar: (valor: string) => string,
+    valorAtual: string,
+    gravar: (valor: string) => void,
+    campo: "cep" | "whatsapp",
+  ): string {
+    const entrada = evento.currentTarget;
+    const posicaoOriginal = entrada.selectionStart ?? entrada.value.length;
+    const digitosAntes = soDigitos(
+      entrada.value.slice(0, posicaoOriginal),
+    ).length;
+    const formatado = formatar(entrada.value);
+    const destino = indiceAposDigitos(formatado, digitosAntes);
+
+    if (formatado === valorAtual) {
+      if (entrada.value !== formatado) {
+        entrada.value = formatado;
+      }
+      entrada.setSelectionRange(destino, destino);
+      cursorPendente.current = null;
+      return formatado;
+    }
+
+    gravar(formatado);
+    cursorPendente.current = { campo, posicao: destino };
+    return formatado;
+  }
+
+  // Recoloca o cursor do campo mascarado após a renderização.
+  useEffect(() => {
+    const pendente = cursorPendente.current;
+    if (!pendente) {
+      return;
+    }
+    const elemento =
+      pendente.campo === "cep" ? refCep.current : refWhatsapp.current;
+    if (elemento) {
+      elemento.setSelectionRange(pendente.posicao, pendente.posicao);
+    }
+    cursorPendente.current = null;
+  }, [cep, whatsapp]);
+
+  function aoMudarCep(evento: ChangeEvent<HTMLInputElement>) {
+    const formatado = mascararDigitacao(
+      evento,
+      formatarCep,
+      cep,
+      setCep,
+      "cep",
+    );
+    void aoDigitarCep(formatado);
+  }
+
+  function aoMudarWhatsapp(evento: ChangeEvent<HTMLInputElement>) {
+    mascararDigitacao(
+      evento,
+      formatarTelefone,
+      whatsapp,
+      setWhatsapp,
+      "whatsapp",
+    );
+  }
+
+  async function aoDigitarCep(valor: string) {
+    // `valor` já vem FORMATADO (máscara) — normalizarCep ignora o
+    // hífen; o estado do campo é gravado pela máscara, não aqui.
+
+    // Consulta só com o CEP COMPLETO. A camada de consulta
+    // cacheia os CEPs já resolvidos: redigitar o mesmo não
+    // refaz a chamada à rede.
+    const normalizado = normalizarCep(valor);
+    if (!normalizado) {
+      setStatusCep("parado");
+      return;
+    }
+
+    const ordem = ++ordemConsulta.current;
+    setStatusCep("buscando");
+    const resultado = await consultarCep(normalizado);
+
+    if (ordem !== ordemConsulta.current) {
+      return;
+    }
+
+    if (resultado.ok) {
+      const editados = camposEditados.current;
+      // Preenche SOMENTE o que veio E o que a cliente não editou.
+      if (resultado.dados.endereco && !editados.endereco) {
+        setEndereco(resultado.dados.endereco);
+      }
+      if (resultado.dados.bairro && !editados.bairro) {
+        setBairro(resultado.dados.bairro);
+      }
+      if (resultado.dados.cidade && !editados.cidade) {
+        setCidade(resultado.dados.cidade);
+      }
+      if (resultado.dados.uf && !editados.uf) {
+        setUf(resultado.dados.uf);
+      }
+      setStatusCep("preenchido");
+      return;
+    }
+
+    setStatusCep(
+      resultado.motivo === "nao_encontrado" ? "nao_encontrado" : "falha",
+    );
+  }
+
+  function marcarEditado(campo: CamposAutofill) {
+    camposEditados.current[campo] = true;
+  }
+
+  return (
+    <>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <Campo
+          rotulo="Nome completo"
+          nome="nome"
+          erro={errosCampos.nome}
+          required
+          maxLength={200}
+          autoComplete="name"
+          defaultValue={entregaAnterior?.nome}
+        />
+        <Campo
+          rotulo="WhatsApp (com DDD)"
+          nome="whatsapp"
+          erro={errosCampos.whatsapp}
+          type="tel"
+          inputMode="tel"
+          placeholder="(81) 99999-8888"
+          required
+          maxLength={30}
+          autoComplete="tel"
+          ref={refWhatsapp}
+          value={whatsapp}
+          onChange={aoMudarWhatsapp}
+        />
+        <Campo
+          rotulo="CEP"
+          nome="cep"
+          erro={errosCampos.cep}
+          inputMode="numeric"
+          placeholder="52000-000"
+          required
+          maxLength={20}
+          autoComplete="postal-code"
+          ref={refCep}
+          value={cep}
+          onChange={aoMudarCep}
+        />
+        <Campo
+          rotulo="Cidade"
+          nome="cidade"
+          erro={errosCampos.cidade}
+          required
+          maxLength={120}
+          autoComplete="address-level2"
+          value={cidade}
+          onChange={(evento) => {
+            marcarEditado("cidade");
+            setCidade(evento.target.value);
+          }}
+        />
+      </div>
+
+      {/* Estado da consulta do CEP (carregamento e avisos).
+          Melhoria progressiva: nunca bloqueia o envio. Quando o
+          CEP não está completo, não há mensagem — layout idêntico
+          ao de antes. */}
+      {statusCep !== "parado" && (
+        <p
+          role="status"
+          className={
+            statusCep === "nao_encontrado" || statusCep === "falha"
+              ? "mt-3 rounded-lg bg-champagne px-3 py-1.5 text-xs leading-5 text-ink"
+              : "mt-3 text-xs leading-5 text-ink-soft"
+          }
+        >
+          {MENSAGENS_CEP[statusCep]}
+        </p>
+      )}
+
+      <div className="mt-4 grid gap-4">
+        <Campo
+          rotulo="Endereço (rua e número)"
+          nome="endereco"
+          erro={errosCampos.endereco}
+          required
+          maxLength={300}
+          autoComplete="address-line1"
+          value={endereco}
+          onChange={(evento) => {
+            marcarEditado("endereco");
+            setEndereco(evento.target.value);
+          }}
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Campo
+            rotulo="Complemento"
+            nome="complemento"
+            erro={errosCampos.complemento}
+            opcional
+            maxLength={200}
+            placeholder="Apto, bloco, referência…"
+            autoComplete="address-line2"
+            defaultValue={entregaAnterior?.complemento}
+          />
+          <Campo
+            rotulo="Bairro"
+            nome="bairro"
+            erro={errosCampos.bairro}
+            opcional
+            maxLength={120}
+            autoComplete="address-level3"
+            value={bairro}
+            onChange={(evento) => {
+              marcarEditado("bairro");
+              setBairro(evento.target.value);
+            }}
+          />
+        </div>
+        <div className="sm:w-40">
+          <Campo
+            rotulo="UF"
+            nome="uf"
+            erro={errosCampos.uf}
+            required
+            maxLength={2}
+            pattern="[A-Za-z]{2}"
+            title="Duas letras (ex.: PE)"
+            placeholder="PE"
+            autoCapitalize="characters"
+            className="uppercase"
+            autoComplete="address-level1"
+            value={uf}
+            onChange={(evento) => {
+              marcarEditado("uf");
+              setUf(evento.target.value);
+            }}
+          />
+        </div>
+      </div>
+    </>
   );
 }
