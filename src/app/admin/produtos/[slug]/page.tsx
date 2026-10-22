@@ -5,9 +5,10 @@
 // (token httpOnly da sessão — ver src/lib/painel-crud.ts):
 // ATIVAS e RASCUNHOS abrem aqui; a loja pública continua
 // mostrando só ativas. Inclui a tabela de estoque real por
-// variação e o formulário de edição preenchido (visual, sem
-// gravação — o CADASTRO de peças novas já grava; a edição
-// gravável chega em etapa futura).
+// variação, o ENVIO/EXCLUSÃO de fotos por cor (etapa 3) e o
+// formulário de edição preenchido (visual, sem gravação — o
+// CADASTRO de peças novas já grava; a edição gravável chega em
+// etapa futura).
 // ============================================================
 
 import type { Metadata } from "next";
@@ -20,12 +21,16 @@ import {
   CatalogoErro,
   listarCategorias,
   listarOpcoesVariacoes,
-  type ProdutoCompleto,
 } from "@/lib/catalogo";
-import { PainelErro, obterProdutoPainel } from "@/lib/painel-crud";
+import {
+  PainelErro,
+  obterProdutoPainel,
+  type ProdutoDetalhePainel,
+} from "@/lib/painel-crud";
 import { Aviso } from "@/components/admin/Aviso";
 import { BotaoLink } from "@/components/admin/Botao";
 import { FormularioProduto } from "@/components/admin/FormularioProduto";
+import { FotosProduto } from "@/components/admin/FotosProduto";
 import { IconeOlho } from "@/components/admin/Icones";
 import { RotuloStatus } from "@/components/admin/RotuloStatus";
 import { Tabela, Td, Th } from "@/components/admin/Tabela";
@@ -60,9 +65,10 @@ async function ConteudoProduto({ params }: PropsConteudo) {
   const { slug } = await params;
 
   // Peça real + categorias + cores/tamanhos existentes na loja.
-  // A peça vem pela LEITURA ADMINISTRATIVA (rascunhos incluídos);
-  // categorias e opções continuam na leitura pública.
-  let produto: ProdutoCompleto | null;
+  // A peça vem pela LEITURA ADMINISTRATIVA (rascunhos incluídos,
+  // com as cores novas + fotos por cor embutidas); categorias e
+  // opções continuam na leitura pública.
+  let produto: ProdutoDetalhePainel | null;
   let categorias: Awaited<ReturnType<typeof listarCategorias>>;
   let opcoes: Awaited<ReturnType<typeof listarOpcoesVariacoes>>;
   try {
@@ -183,6 +189,14 @@ async function ConteudoProduto({ params }: PropsConteudo) {
             ))}
           </tbody>
         </Tabela>
+      </section>
+
+      {/* Fotos por cor (envio e exclusão reais — etapa 3) */}
+      <section aria-labelledby="fotos-produto" className="mt-8">
+        <h2 id="fotos-produto" className="mb-3 font-display text-lg font-semibold text-ink">
+          Fotos por cor
+        </h2>
+        <FotosProduto cores={produto.coresPainel} />
       </section>
 
       {/* Formulário de edição (visual) */}

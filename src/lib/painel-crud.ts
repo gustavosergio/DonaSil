@@ -30,6 +30,8 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { COOKIE_TOKEN } from "@/lib/painel-auth";
+import type { CorPainel } from "@/lib/fotos";
+import { escolherCapa } from "@/lib/catalogo";
 import type {
   CorPeca,
   ProdutoCompleto,
@@ -86,6 +88,39 @@ const variacaoSchema = z.object({
   quantidade: z.number().int().nonnegative(),
 });
 
+// Forma mínima da galeria para a CAPA — espelho do schema
+// privado de catalogo.ts (a MESMA regra de escolherCapa vale
+// nos dois lados). A lista do painel preenche `capa` para o
+// tipo continuar inteiro em todos os usos.
+const corGaleriaSchema = z.object({
+  ordem: z.number().int().nonnegative(),
+  produto_fotos: z.array(
+    z.object({
+      caminho: z.string().min(1),
+      ordem: z.number().int().nonnegative(),
+    }),
+  ),
+});
+
+// Cores da tabela produto_cores (migração M1) com a galeria de
+// fotos POR COR embutida — é o que alimenta a seção "Fotos por
+// cor" do painel. Peças antigas e de demonstração não têm
+// linhas nesta tabela (o embed volta vazio, e o componente
+// explica isso na tela).
+const fotoSchema = z.object({
+  id: z.uuid(),
+  caminho: z.string().min(1),
+  ordem: z.number().int().nonnegative(),
+});
+
+const corTabelaSchema = z.object({
+  id: z.uuid(),
+  nome: z.string().min(1),
+  cor_hex: z.string().min(1),
+  ordem: z.number().int().nonnegative(),
+  produto_fotos: z.array(fotoSchema),
+});
+
 // Linha da LISTA do painel: resumo + status administrativo.
 const produtoListaSchema = z.object({
   id: z.uuid(),
@@ -97,10 +132,12 @@ const produtoListaSchema = z.object({
   demo: z.boolean(),
   categorias: categoriaEmbutidaSchema,
   variacoes: z.array(variacaoSchema),
+  produto_cores: z.array(corGaleriaSchema),
 });
 
 // Linha completa (detalhe no painel) — mesma forma do detalhe
-// público, consultada aqui SEM o filtro ativo.
+// público, consultada aqui SEM o filtro ativo, acrescentando as
+// cores da tabela nova com suas fotos (produto_cores → produto_fotos).
 const produtoDetalheSchema = z.object({
   id: z.uuid(),
   slug: z.string().min(1),
@@ -115,6 +152,7 @@ const produtoDetalheSchema = z.object({
   demo: z.boolean(),
   categorias: categoriaEmbutidaSchema,
   variacoes: z.array(variacaoSchema),
+  produto_cores: z.array(corTabelaSchema),
 });
 
 type ProdutoListaLinha = z.infer<typeof produtoListaSchema>;
@@ -129,6 +167,12 @@ export type ProdutoResumoPainel = ProdutoResumo & {
   ativo: boolean;
   destaque: boolean;
   demo: boolean;
+};
+
+/** Detalhe da peça no painel: dados públicos + cores da tabela
+ *  nova (produto_cores) com a galeria de fotos de cada cor. */
+export type ProdutoDetalhePainel = ProdutoCompleto & {
+  coresPainel: CorPainel[];
 };
 
 // ------------------------------------------------------------
@@ -240,6 +284,9 @@ function paraResumoPainel(linha: ProdutoListaLinha): ProdutoResumoPainel {
     categoriaNome: linha.categorias.nome,
     categoriaSlug: linha.categorias.slug,
     cores: extrairCores(linha.variacoes),
+    // MESMA regra da vitrine (escolherCapa, em catalogo.ts) —
+    // o tipo ProdutoResumo agora exige o campo em todos os usos.
+    capa: escolherCapa(linha.produto_cores),
     disponivel: linha.variacoes.some((v) => v.quantidade > 0),
     ativo: linha.ativo,
     destaque: linha.destaque,
@@ -247,7 +294,7 @@ function paraResumoPainel(linha: ProdutoListaLinha): ProdutoResumoPainel {
   };
 }
 
-function paraCompletoPainel(linha: ProdutoDetalheLinha): ProdutoCompleto {
+function paraCompletoPainel(linha: ProdutoDetalheLinha): ProdutoDetalhePainel {
   const variacoes: VariacaoEstoque[] = [...linha.variacoes]
     .sort(compararVariacoes)
     .map((v) => ({
@@ -257,6 +304,30 @@ function paraCompletoPainel(linha: ProdutoDetalheLinha): ProdutoCompleto {
       corHex: v.cor_hex,
       quantidade: v.quantidade,
     }));
+
+  // Cores da tabela nova, na ordem definida no cadastro; as fotos
+  // de cada cor vêm na ordem própria da galeria (o PostgREST não
+  // ordena embeds — a ordenação é feita aqui, já validada).
+  const coresPainel: CorPainel[] = [...linha.produto_cores]
+    .sort((a, b) =>
+      a.ordem !== b.ordem
+        ? a.ordem - b.ordem
+        : a.nome.localeCompare(b.nome, "pt-BR"),
+    )
+    .map((cor) => ({
+      id: cor.id,
+      nome: cor.nome,
+      hex: cor.cor_hex,
+      ordem: cor.ordem,
+      fotos: [...cor.produto_fotos]
+        .sort((a, b) => a.ordem - b.ordem)
+        .map((foto) => ({
+          id: foto.id,
+          caminho: foto.caminho,
+          ordem: foto.ordem,
+        })),
+    }));
+
   return {
     id: linha.id,
     slug: linha.slug,
@@ -272,9 +343,15 @@ function paraCompletoPainel(linha: ProdutoDetalheLinha): ProdutoCompleto {
     categoriaNome: linha.categorias.nome,
     categoriaSlug: linha.categorias.slug,
     cores: extrairCores(linha.variacoes),
+    // MESMA regra da vitrine (escolherCapa, em catalogo.ts) —
+    // obrigatória porque ProdutoCompleto ganhou o campo capa.
+    // O painel ainda não usa a capa em tela; o campo viaja
+    // preenchido para os dois lados nunca divergirem.
+    capa: escolherCapa(linha.produto_cores),
     variacoes,
     disponivel: variacoes.some((v) => v.quantidade > 0),
     estoqueTotal: variacoes.reduce((total, v) => total + v.quantidade, 0),
+    coresPainel,
   };
 }
 
@@ -297,16 +374,16 @@ function sanitizarBusca(busca: string): string {
 // ------------------------------------------------------------
 
 const SELECT_LISTA =
-  "id,slug,nome,preco,ativo,destaque,demo,categorias(nome,slug),variacoes(id,tamanho,cor,cor_hex,quantidade)";
+  "id,slug,nome,preco,ativo,destaque,demo,categorias(nome,slug),variacoes(id,tamanho,cor,cor_hex,quantidade),produto_cores(ordem,produto_fotos(caminho,ordem))";
 
 // PostgREST v12: para FILTRAR pela categoria embutida
 // (categorias.slug=eq.…) o embed precisa do hint `!inner` (mesmo
 // comportamento confirmado no catálogo público).
 const SELECT_LISTA_FILTRADA =
-  "id,slug,nome,preco,ativo,destaque,demo,categorias!inner(nome,slug),variacoes(id,tamanho,cor,cor_hex,quantidade)";
+  "id,slug,nome,preco,ativo,destaque,demo,categorias!inner(nome,slug),variacoes(id,tamanho,cor,cor_hex,quantidade),produto_cores(ordem,produto_fotos(caminho,ordem))";
 
 const SELECT_DETALHE =
-  "id,slug,nome,descricao,composicao,cuidados,preco,fotos,ativo,destaque,demo,categorias(nome,slug),variacoes(id,tamanho,cor,cor_hex,quantidade)";
+  "id,slug,nome,descricao,composicao,cuidados,preco,fotos,ativo,destaque,demo,categorias(nome,slug),variacoes(id,tamanho,cor,cor_hex,quantidade),produto_cores(id,nome,cor_hex,ordem,produto_fotos(id,caminho,ordem))";
 
 /**
  * TODAS as peças do banco para a lista do painel — ATIVAS e
@@ -352,7 +429,7 @@ export async function listarProdutosPainel(
  * requisição executam uma vez só.
  */
 export const obterProdutoPainel = cache(
-  async (slug: string): Promise<ProdutoCompleto | null> => {
+  async (slug: string): Promise<ProdutoDetalhePainel | null> => {
     const params = new URLSearchParams({
       select: SELECT_DETALHE,
       slug: `eq.${slug}`,

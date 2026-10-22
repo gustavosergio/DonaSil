@@ -17,6 +17,7 @@
 
 import { cache } from "react";
 import { z } from "zod";
+import { urlPublicaFoto } from "@/lib/fotos";
 
 // ------------------------------------------------------------
 // Erros da camada de dados
@@ -69,6 +70,21 @@ const variacaoSchema = z.object({
   quantidade: z.number().int().nonnegative(),
 });
 
+// Cores da tabela produto_cores (migração M1) na forma MÍNIMA
+// que a CAPA precisa: a ordem da cor no cadastro + as fotos de
+// cada cor (caminho + ordem). A galeria completa por cor
+// (id, nome, tom) continua sendo lida só no painel
+// (src/lib/painel-crud.ts) — aqui a vitrine só escolhe a capa.
+const corGaleriaSchema = z.object({
+  ordem: z.number().int().nonnegative(),
+  produto_fotos: z.array(
+    z.object({
+      caminho: z.string().min(1),
+      ordem: z.number().int().nonnegative(),
+    }),
+  ),
+});
+
 // Linha de produto para listas (catálogo, destaques da home).
 const produtoResumoSchema = z.object({
   id: z.uuid(),
@@ -77,6 +93,7 @@ const produtoResumoSchema = z.object({
   preco: z.number().nonnegative(),
   categorias: categoriaEmbutidaSchema,
   variacoes: z.array(variacaoSchema),
+  produto_cores: z.array(corGaleriaSchema),
 });
 
 // Linha de produto completa para a página de detalhes.
@@ -94,6 +111,7 @@ const produtoDetalheSchema = z.object({
   demo: z.boolean(),
   categorias: categoriaEmbutidaSchema,
   variacoes: z.array(variacaoSchema),
+  produto_cores: z.array(corGaleriaSchema),
 });
 
 type ProdutoResumoLinha = z.infer<typeof produtoResumoSchema>;
@@ -129,6 +147,11 @@ export type ProdutoResumo = {
   categoriaNome: string;
   categoriaSlug: string;
   cores: CorPeca[];
+  /** URL pública da capa (primeira foto da primeira cor com
+   *  fotos — ver escolherCapa). `null` quando a peça não tem
+   *  fotos: demonstrações e cadastros antigos seguem com o
+   *  placeholder "Foto demonstrativa". */
+  capa: string | null;
   // Disponível = existe PELO MENOS UMA variação com estoque (> 0).
   // Produto sem variações ou com todo o estoque zerado = esgotado.
   disponivel: boolean;
@@ -150,6 +173,9 @@ export type ProdutoCompleto = {
   categoriaSlug: string;
   cores: CorPeca[];
   variacoes: VariacaoEstoque[];
+  /** Capa pela MESMA regra do resumo (escolherCapa) — usada pela
+   *  página individual da peça. Legado `fotos` segue intacto. */
+  capa: string | null;
   disponivel: boolean;
   estoqueTotal: number;
 };
@@ -238,6 +264,31 @@ function extrairCores(
   return cores;
 }
 
+/**
+ * CAPA da peça: a primeira foto (por ordem) da PRIMEIRA cor (por
+ * ordem) que tiver fotos. Regra determinística, sem preferência
+ * escondida — o PostgREST não ordena embeds, então a ordenação é
+ * feita aqui, já validada pelo Zod.
+ * Sem fotos → null: peças de demonstração e cadastros antigos
+ * (sem produto_cores/produto_fotos) seguem com o placeholder
+ * "Foto demonstrativa" da vitrine.
+ * Exportada porque o PAINEL preenche o mesmo campo usando a
+ * MESMA regra — as duas leituras nunca divergem.
+ */
+export function escolherCapa(
+  cores: Array<{
+    ordem: number;
+    produto_fotos: Array<{ caminho: string; ordem: number }>;
+  }>,
+): string | null {
+  const ordenadas = [...cores].sort((a, b) => a.ordem - b.ordem);
+  for (const cor of ordenadas) {
+    const fotos = [...cor.produto_fotos].sort((a, b) => a.ordem - b.ordem);
+    if (fotos.length > 0) return urlPublicaFoto(fotos[0].caminho);
+  }
+  return null;
+}
+
 function paraResumo(linha: ProdutoResumoLinha): ProdutoResumo {
   return {
     id: linha.id,
@@ -247,6 +298,7 @@ function paraResumo(linha: ProdutoResumoLinha): ProdutoResumo {
     categoriaNome: linha.categorias.nome,
     categoriaSlug: linha.categorias.slug,
     cores: extrairCores(linha.variacoes),
+    capa: escolherCapa(linha.produto_cores),
     disponivel: linha.variacoes.some((v) => v.quantidade > 0),
   };
 }
@@ -276,6 +328,7 @@ function paraCompleto(linha: ProdutoDetalheLinha): ProdutoCompleto {
     categoriaNome: linha.categorias.nome,
     categoriaSlug: linha.categorias.slug,
     cores: extrairCores(linha.variacoes),
+    capa: escolherCapa(linha.produto_cores),
     variacoes,
     disponivel: variacoes.some((v) => v.quantidade > 0),
     estoqueTotal: variacoes.reduce((total, v) => total + v.quantidade, 0),
@@ -301,17 +354,17 @@ function sanitizarBusca(busca: string): string {
 // ------------------------------------------------------------
 
 const SELECT_RESUMO =
-  "id,slug,nome,preco,categorias(nome,slug),variacoes(id,tamanho,cor,cor_hex,quantidade)";
+  "id,slug,nome,preco,categorias(nome,slug),variacoes(id,tamanho,cor,cor_hex,quantidade),produto_cores(ordem,produto_fotos(caminho,ordem))";
 
 // PostgREST v12: para FILTRAR os produtos pela categoria embutida
 // (categorias.slug=eq.…), o embed precisa do hint `!inner` — sem ele
 // o filtro é ignorado e o embed volta nulo (confirmado em testes de
 // leitura contra o banco real; o schema Zod rejeitou essa resposta).
 const SELECT_RESUMO_FILTRADO =
-  "id,slug,nome,preco,categorias!inner(nome,slug),variacoes(id,tamanho,cor,cor_hex,quantidade)";
+  "id,slug,nome,preco,categorias!inner(nome,slug),variacoes(id,tamanho,cor,cor_hex,quantidade),produto_cores(ordem,produto_fotos(caminho,ordem))";
 
 const SELECT_DETALHE =
-  "id,slug,nome,descricao,composicao,cuidados,preco,fotos,ativo,destaque,demo,categorias(nome,slug),variacoes(id,tamanho,cor,cor_hex,quantidade)";
+  "id,slug,nome,descricao,composicao,cuidados,preco,fotos,ativo,destaque,demo,categorias(nome,slug),variacoes(id,tamanho,cor,cor_hex,quantidade),produto_cores(ordem,produto_fotos(caminho,ordem))";
 
 /** Categorias na ordem definida no banco (coluna `ordem`). */
 export async function listarCategorias(): Promise<CategoriaResumo[]> {

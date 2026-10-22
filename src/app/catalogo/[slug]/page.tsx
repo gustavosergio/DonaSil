@@ -79,12 +79,29 @@ async function DetalheProduto({ params }: Pick<Props, "params">) {
 
   return (
     <div className="mt-6 grid gap-10 lg:grid-cols-2 lg:items-start">
-      {/* Reserva da foto real (Storage entra na Etapa 10) */}
+      {/* Capa real (primeira foto da primeira cor com fotos —
+          regra em src/lib/catalogo.ts); sem foto segue o
+          placeholder "Foto demonstrativa". */}
       <div className="relative aspect-[3/4] overflow-hidden rounded-3xl bg-champagne">
-        <div className="absolute inset-0 bg-gradient-to-br from-gold-soft/50 via-champagne to-sand" />
-        <div className="absolute bottom-3 left-3 rounded-full bg-white/85 px-3 py-1 text-xs text-ink-soft">
-          Foto demonstrativa
-        </div>
+        {produto.capa ? (
+          /* <img> simples — bucket externo do Supabase; o
+             next/image exigiria remotePatterns no next.config
+             (fora do escopo). Foto principal da página: sem
+             loading="lazy" (acima da dobra). */
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={produto.capa}
+            alt={`Foto da peça ${produto.nome}`}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br from-gold-soft/50 via-champagne to-sand" />
+            <div className="absolute bottom-3 left-3 rounded-full bg-white/85 px-3 py-1 text-xs text-ink-soft">
+              Foto demonstrativa
+            </div>
+          </>
+        )}
       </div>
 
       <div>
