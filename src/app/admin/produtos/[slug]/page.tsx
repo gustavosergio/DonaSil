@@ -1,9 +1,13 @@
 // ============================================================
 // DONA SIL — PAINEL — VER / EDITAR UM PRODUTO
 // ============================================================
-// Mostra os dados REAIS da peça (mesma leitura da página da
-// loja), a tabela de estoque por variação e o formulário de
-// edição já preenchido — visual, sem gravação.
+// Mostra os dados REAIS da peça pela LEITURA ADMINISTRATIVA
+// (token httpOnly da sessão — ver src/lib/painel-crud.ts):
+// ATIVAS e RASCUNHOS abrem aqui; a loja pública continua
+// mostrando só ativas. Inclui a tabela de estoque real por
+// variação e o formulário de edição preenchido (visual, sem
+// gravação — o CADASTRO de peças novas já grava; a edição
+// gravável chega em etapa futura).
 // ============================================================
 
 import type { Metadata } from "next";
@@ -16,9 +20,9 @@ import {
   CatalogoErro,
   listarCategorias,
   listarOpcoesVariacoes,
-  obterProduto,
   type ProdutoCompleto,
 } from "@/lib/catalogo";
+import { PainelErro, obterProdutoPainel } from "@/lib/painel-crud";
 import { Aviso } from "@/components/admin/Aviso";
 import { BotaoLink } from "@/components/admin/Botao";
 import { FormularioProduto } from "@/components/admin/FormularioProduto";
@@ -56,12 +60,14 @@ async function ConteudoProduto({ params }: PropsConteudo) {
   const { slug } = await params;
 
   // Peça real + categorias + cores/tamanhos existentes na loja.
+  // A peça vem pela LEITURA ADMINISTRATIVA (rascunhos incluídos);
+  // categorias e opções continuam na leitura pública.
   let produto: ProdutoCompleto | null;
   let categorias: Awaited<ReturnType<typeof listarCategorias>>;
   let opcoes: Awaited<ReturnType<typeof listarOpcoesVariacoes>>;
   try {
     [produto, categorias, opcoes] = await Promise.all([
-      obterProduto(slug),
+      obterProdutoPainel(slug),
       listarCategorias(),
       listarOpcoesVariacoes(),
     ]);
@@ -69,7 +75,8 @@ async function ConteudoProduto({ params }: PropsConteudo) {
     return <AvisoErro erro={erro} />;
   }
 
-  // Peça inexistente (ou inativa) = página não encontrada no painel.
+  // Peça inexistente = 404. Rascunho (inativa) ABRE normalmente:
+  // a leitura administrativa não filtra por ativo.
   if (!produto) {
     notFound();
   }
@@ -86,7 +93,7 @@ async function ConteudoProduto({ params }: PropsConteudo) {
       <div className="mt-4">
         <TituloSecao
           titulo={produto.nome}
-          descricao={`Peça real do catálogo, carregada do banco. Categoria: ${produto.categoriaNome}.`}
+          descricao={`Peça carregada pelo acesso administrativo — ativa ou rascunho. Categoria: ${produto.categoriaNome}.`}
           acoes={
             <BotaoLink
               href={`/catalogo/${produto.slug}` as Route<"/catalogo/[slug]">}
@@ -119,6 +126,7 @@ async function ConteudoProduto({ params }: PropsConteudo) {
           <div>
             <dt className="text-ink-soft">Situação</dt>
             <dd className="mt-1 flex flex-wrap gap-1.5">
+              {!produto.ativo && <RotuloStatus tonalidade="neutro">Rascunho</RotuloStatus>}
               {produto.disponivel ? (
                 <RotuloStatus tonalidade="ativo">Em estoque</RotuloStatus>
               ) : (
@@ -210,13 +218,22 @@ async function ConteudoProduto({ params }: PropsConteudo) {
 // ------------------------------------------------------------
 
 function AvisoErro({ erro }: { erro: unknown }) {
+  // Falha de consulta NUNCA vira "peça não encontrada".
   const mensagem =
-    erro instanceof CatalogoErro
+    erro instanceof PainelErro || erro instanceof CatalogoErro
       ? erro.message
       : "Não foi possível carregar esta peça agora.";
+  const semSessao = erro instanceof PainelErro && erro.tipo === "sessao";
   return (
     <Aviso tonalidade="atencao" titulo="Não foi possível carregar a peça">
-      {mensagem} Recarregue a página em alguns instantes ou volte para a lista.
+      {mensagem}{" "}
+      {semSessao ? (
+        <Link href="/admin/login" className="font-medium text-gold-ink hover:underline">
+          Entrar de novo
+        </Link>
+      ) : (
+        "Recarregue a página em alguns instantes ou volte para a lista."
+      )}
     </Aviso>
   );
 }

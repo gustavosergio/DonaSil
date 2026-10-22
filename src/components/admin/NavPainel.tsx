@@ -6,10 +6,11 @@
 // * Desktop: menu lateral fixo (Visão geral, Produtos, Categorias,
 //   Cores e variações, Pedidos, Configurações) + barra superior
 //   com o nome da seção atual e espaço para a conta.
-// * Mobile: barra superior com botão de abrir/fechar o menu,
+// * Mobile: barra superior com botão de abrir/fechar do menu,
 //   que desliza por cima do conteúdo.
-// * Conta: a entrada de administradoras (login) chega em uma
-//   etapa futura — por ora o espaço mostra isso com clareza.
+// * Conta: sessão de administradora com botão Sair (o acesso é
+//   verificado no servidor; ver src/proxy.ts e /admin/login).
+// * Na tela de entrada (/admin/login) o menu inteiro se esconde.
 // ============================================================
 
 import { useState } from "react";
@@ -17,6 +18,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import AlternarTema from "@/components/AlternarTema";
+import BotaoSair from "./BotaoSair";
 import {
   IconeCasa,
   IconeEngrenagem,
@@ -89,20 +91,30 @@ function ListaSecoes({ caminho, aoNavegar }: { caminho: string; aoNavegar?: () =
   );
 }
 
-const RODAPE_MENU = (
-  <div className="border-t border-sand px-5 py-4">
-    <p className="text-xs font-semibold text-ink">Conta</p>
-    <p className="mt-1 text-xs leading-5 text-ink-soft">
-      A entrada de administradoras (login) chega com a etapa de
-      segurança do painel. Até lá, o painel é apenas visual.
-    </p>
-  </div>
-);
+/** Rodapé da conta — sessão de administradora + sair. */
+function RodapeConta() {
+  return (
+    <div className="border-t border-sand px-5 py-4">
+      <p className="text-xs font-semibold text-ink">Conta</p>
+      <p className="mt-1 text-xs leading-5 text-ink-soft">
+        Sessão de administradora ativa. Saia do painel quando
+        terminar de usá-lo em um computador compartilhado.
+      </p>
+      <div className="mt-2.5">
+        <BotaoSair />
+      </div>
+    </div>
+  );
+}
 
 export default function NavPainel() {
   const caminho = usePathname() ?? "/admin";
   const [aberto, setAberto] = useState(false);
   const titulo = tituloDaRota(caminho);
+
+  // Na tela de entrada o menu some por completo (sem sessão não
+  // há seções para navegar — o portão cuida do resto).
+  if (caminho === "/admin/login") return null;
 
   return (
     <>
@@ -119,7 +131,7 @@ export default function NavPainel() {
         <nav aria-label="Seções do painel" className="flex-1 overflow-y-auto px-3 py-4">
           <ListaSecoes caminho={caminho} />
         </nav>
-        {RODAPE_MENU}
+        <RodapeConta />
       </aside>
 
       {/* Barra superior */}
@@ -142,8 +154,11 @@ export default function NavPainel() {
         </div>
         <AlternarTema />
         <span className="hidden shrink-0 rounded-full border border-sand px-3 py-1.5 text-xs font-medium text-ink-soft md:inline-block">
-          Sessão local — sem login por enquanto
+          Sessão de administradora
         </span>
+        <div className="hidden md:block">
+          <BotaoSair />
+        </div>
       </header>
 
       {/* Menu lateral — telas pequenas (desliza por cima) */}
@@ -173,7 +188,7 @@ export default function NavPainel() {
             <nav aria-label="Seções do painel" className="flex-1 overflow-y-auto px-3 py-4">
               <ListaSecoes caminho={caminho} aoNavegar={() => setAberto(false)} />
             </nav>
-            {RODAPE_MENU}
+            <RodapeConta />
           </aside>
         </>
       )}

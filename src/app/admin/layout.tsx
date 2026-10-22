@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import NavPainel from "@/components/admin/NavPainel";
+import CascaPainel from "@/components/admin/CascaPainel";
 
 // ============================================================
 // DONA SIL — PAINEL ADMIN — LAYOUT
@@ -14,8 +15,10 @@ import NavPainel from "@/components/admin/NavPainel";
 // fica dentro de um Suspense — exigência do modo de cache do
 // Next 16 para o casca estático das páginas.
 //
+// A entrada de administradoras já está ativa (/admin/login +
+// portão em src/proxy.ts — cookies httpOnly + Supabase Auth).
+//
 // Etapas futuras (já previstas no plano do painel):
-//   * autenticação de administradoras (login);
 //   * escrita no banco (após as migrações M2/M3);
 //   * upload de fotos (Storage, na Etapa 10).
 // ============================================================
@@ -48,14 +51,25 @@ export default function LayoutAdmin({ children }: LayoutProps<"/admin">) {
       <Suspense fallback={<CascaNavegacao />}>
         <NavPainel />
       </Suspense>
-      <div className="md:ml-64">
-        <main
-          id="conteudo"
-          className="mx-auto w-full max-w-5xl px-4 pb-16 pt-24 sm:px-6 lg:px-10"
-        >
-          {children}
-        </main>
-      </div>
+      {/* A casca lê a rota (client) para sumir na tela de entrada —
+          por isso também precisa de um Suspense, como o menu acima
+          (exigência do casca estático do Next 16). */}
+      <Suspense fallback={<CascaConteudo />}>
+        <CascaPainel>
+          <main
+            id="conteudo"
+            className="mx-auto w-full max-w-5xl px-4 pb-16 pt-24 sm:px-6 lg:px-10"
+          >
+            {children}
+          </main>
+        </CascaPainel>
+      </Suspense>
     </div>
   );
+}
+
+/** Reserva o espaço do conteúdo (com a margem do menu) enquanto a
+ *  casca de cliente resolve a rota atual. */
+function CascaConteudo() {
+  return <div aria-hidden="true" className="min-h-dvh md:ml-64" />;
 }

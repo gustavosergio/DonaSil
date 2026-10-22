@@ -1,9 +1,11 @@
 // ============================================================
-// DONA SIL — PAINEL — CADASTRAR PRODUTO (FORMULÁRIO VISUAL)
+// DONA SIL — PAINEL — CADASTRAR PRODUTO (GRAVAÇÃO REAL)
 // ============================================================
-// Formulário completo, com as categorias reais no seletor.
-// Ao "salvar" o painel apenas confere os campos e avisa que a
-// gravação chega com a integração (migrações M2/M3 + login).
+// Formulário completo, com as categorias reais no seletor e as
+// sugestões de cores/tamanhos que já existem na loja. Ao salvar,
+// o formulário envia o cadastro para POST /api/admin/produtos
+// (Route Handler com sessão httpOnly): grava produto ATIVO +
+// cores (produto_cores) + variações com estoque (variacoes).
 // ============================================================
 
 import type { Metadata } from "next";
@@ -32,7 +34,7 @@ export default function PaginaNovoProduto() {
       <div className="mt-4">
         <TituloSecao
           titulo="Cadastrar produto"
-          descricao="Preencha os dados da peça. Nesta etapa o formulário é visual: ele confere os campos, e a gravação no banco chega com a integração do painel."
+          descricao="Preencha os dados da peça. Ao salvar, ela é criada no banco como ativa — fica visível na loja pública de imediato, com as cores e o estoque escolhidos."
         />
       </div>
 

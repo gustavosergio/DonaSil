@@ -27,7 +27,7 @@ export default function PaginaVisaoGeral() {
     <>
       <TituloSecao
         titulo="Olá! Este é o painel da Dona Sil."
-        descricao="Aqui você vai cuidar do catálogo, das categorias, das cores e dos pedidos da loja. O painel está em fase visual: as páginas estão prontas e a gravação no banco chega junto com as migrações e a tela de entrada (login)."
+        descricao="Aqui você vai cuidar do catálogo, das categorias, das cores e dos pedidos da loja. O painel está tomando forma: as páginas estão prontas, a entrada já exige a sua conta de administradora, e o cadastro de peças novas já grava no banco. A edição e as demais gravações chegam nas próximas etapas."
       />
 
       {MODO_DEMO && (

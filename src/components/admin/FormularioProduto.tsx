@@ -1,26 +1,32 @@
 "use client";
 
 // ============================================================
-// DONA SIL — PAINEL — FORMULÁRIO DE PRODUTO (VISUAL)
+// DONA SIL — PAINEL — FORMULÁRIO DE PRODUTO
 // ============================================================
-// Formulário completo de cadastro/edição com validação LOCAL:
-//   * nome obrigatório, preço válido, categoria obrigatória;
-//   * seleção de CORES e TAMANHOS: as opções vêm das variações
-//     reais da loja (prop `coresDisponiveis` / `tamanhosDisponiveis`)
-//     — nenhuma opção é inventada aqui;
-//   * na edição, as seleções atuais da peça já vêm marcadas
-//     (props `coresSelecionadasIniciais` / `tamanhosSelecionadosIniciais`);
-//   * ao "salvar", apenas confere os campos e explica que a
-//     gravação no banco chega com a integração do painel.
-// NADA é enviado — nenhum fetch, nenhum cadastro fingido.
+// Dois modos, uma aparência:
+//   * modo "novo" → GRAVAÇÃO REAL: envia o cadastro para
+//     POST /api/admin/produtos (Route Handler que valida a sessão
+//     httpOnly no servidor e grava produto + cores + variações
+//     no Supabase). A peça nasce ATIVA na loja.
+//   * modo "edicao" → visual honesto: valida os campos e avisa
+//     que a edição gravável chega em etapa futura. NADA é enviado.
+//
+// Cores (modo novo): sugestões reais da loja + cor livre (nome +
+// tom #rrggbb). Tamanhos: sugestões reais + tamanho livre, cada um
+// com estoque. A quantidade vale para todas as cores (decisão de
+// MVP combinada com a administradora) — cada cor × tamanho vira
+// uma variação no banco.
 // ============================================================
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import type { CategoriaResumo, CorPeca } from "@/lib/catalogo";
 import { Aviso } from "./Aviso";
 import { Botao, BotaoLink } from "./Botao";
 import { CampoArea, CampoCheckbox, CampoSelect, CampoTexto } from "./Campo";
-import { IconeCheck } from "./Icones";
+import { IconeCheck, IconeFechar, IconeMais } from "./Icones";
 
 /** Converte texto de preço ("189,90", "R$ 1.299,00", "129.90") em número. */
 function paraNumero(texto: string): number | null {
@@ -38,9 +44,23 @@ export type ValoresProduto = {
   descricao: string;
   composicao: string;
   cuidados: string;
-  /** Status visual — a gravação real chega com a integração. */
+  /** Status visual — usado apenas no modo edição (visual). */
   status: "ativo" | "rascunho";
   destaque: boolean;
+};
+
+/** Cor escolhida no cadastro (nome livre + tom). */
+type CorEscolhida = { nome: string; hex: string };
+
+/** Tamanho escolhido no cadastro + estoque inicial. */
+type TamanhoEscolhido = { tamanho: string; quantidade: number };
+
+type ErrosFormulario = {
+  nome?: string;
+  preco?: string;
+  categoriaSlug?: string;
+  cores?: string;
+  tamanhos?: string;
 };
 
 export function FormularioProduto({
@@ -62,6 +82,7 @@ export function FormularioProduto({
   /** Tamanhos que a peça já tem hoje (modo edição). */
   tamanhosSelecionadosIniciais?: string[];
 }) {
+  const router = useRouter();
   const [valores, setValores] = useState<ValoresProduto>(
     valoresIniciais ?? {
       nome: "",
@@ -78,14 +99,30 @@ export function FormularioProduto({
     useState<string[]>(coresSelecionadasIniciais);
   const [tamanhosSelecionados, setTamanhosSelecionados] =
     useState<string[]>(tamanhosSelecionadosIniciais);
-  const [erros, setErros] = useState<{ nome?: string; preco?: string; categoriaSlug?: string }>({});
+  const [erros, setErros] = useState<ErrosFormulario>({});
   const [conferido, setConferido] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [erroEnvio, setErroEnvio] = useState<{ mensagem: string; semSessao: boolean } | null>(
+    null,
+  );
+
+  // Estado exclusivo do modo "novo" (cadastro real).
+  const [cores, setCores] = useState<CorEscolhida[]>([]);
+  const [tamanhos, setTamanhos] = useState<TamanhoEscolhido[]>([]);
+  const [novaCorNome, setNovaCorNome] = useState("");
+  const [novaCorHex, setNovaCorHex] = useState("#b08d57");
+  const [novoTamanho, setNovoTamanho] = useState("");
+  const [erroCores, setErroCores] = useState<string | null>(null);
+  const [erroTamanhos, setErroTamanhos] = useState<string | null>(null);
 
   function atualizar<K extends keyof ValoresProduto>(campo: K, valor: ValoresProduto[K]) {
     setValores((atuais) => ({ ...atuais, [campo]: valor }));
   }
 
-  /** Liga/desliga uma cor mantendo a ordem das opções. */
+  // ----------------------------------------------------------
+  // Modo EDIÇÃO — liga/desliga cores e tamanhos (visual, sem envio)
+  // ----------------------------------------------------------
+
   function alternarCor(nome: string) {
     setConferido(false);
     setCoresSelecionadas((atuais) =>
@@ -95,7 +132,6 @@ export function FormularioProduto({
     );
   }
 
-  /** Liga/desliga um tamanho mantendo a ordem das opções. */
   function alternarTamanho(nome: string) {
     setConferido(false);
     setTamanhosSelecionados((atuais) =>
@@ -105,11 +141,127 @@ export function FormularioProduto({
     );
   }
 
-  function aoEnviar(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-    setConferido(false);
+  // ----------------------------------------------------------
+  // Modo NOVO — cores e tamanhos com estoque (cadastro real)
+  // ----------------------------------------------------------
 
-    const novosErros: typeof erros = {};
+  function jaTemCor(nome: string): boolean {
+    const alvo = nome.trim().toLowerCase();
+    return cores.some((cor) => cor.nome.trim().toLowerCase() === alvo);
+  }
+
+  function jaTemTamanho(tamanho: string): boolean {
+    const alvo = tamanho.trim().toLowerCase();
+    return tamanhos.some((item) => item.tamanho.trim().toLowerCase() === alvo);
+  }
+
+  /** Sugestão real da loja: clique adiciona, clique de novo remove. */
+  function alternarCorSugestao(cor: CorPeca) {
+    setErroCores(null);
+    setErroEnvio(null);
+    setCores((atuais) =>
+      jaTemCor(cor.nome)
+        ? atuais.filter((item) => item.nome !== cor.nome)
+        : [...atuais, { nome: cor.nome, hex: cor.hex }],
+    );
+  }
+
+  function adicionarCorPersonalizada() {
+    const nome = novaCorNome.trim();
+    if (!nome) {
+      setErroCores("Escreva o nome da cor (ex.: Off-white).");
+      return;
+    }
+    if (jaTemCor(nome)) {
+      setErroCores("Esta cor já está na lista.");
+      return;
+    }
+    setErroCores(null);
+    setErroEnvio(null);
+    setCores((atuais) => [...atuais, { nome, hex: novaCorHex.toLowerCase() }]);
+    setNovaCorNome("");
+  }
+
+  function removerCor(nome: string) {
+    setErroCores(null);
+    setCores((atuais) => atuais.filter((cor) => cor.nome !== nome));
+  }
+
+  function alternarTamanhoSugestao(tamanho: string) {
+    setErroTamanhos(null);
+    setErroEnvio(null);
+    setTamanhos((atuais) =>
+      jaTemTamanho(tamanho)
+        ? atuais.filter((item) => item.tamanho !== tamanho)
+        : [...atuais, { tamanho, quantidade: 0 }],
+    );
+  }
+
+  function adicionarTamanhoPersonalizado() {
+    const tamanho = novoTamanho.trim();
+    if (!tamanho) {
+      setErroTamanhos("Escreva o tamanho (ex.: 38).");
+      return;
+    }
+    if (jaTemTamanho(tamanho)) {
+      setErroTamanhos("Este tamanho já está na lista.");
+      return;
+    }
+    setErroTamanhos(null);
+    setErroEnvio(null);
+    setTamanhos((atuais) => [...atuais, { tamanho, quantidade: 0 }]);
+    setNovoTamanho("");
+  }
+
+  function removerTamanho(tamanho: string) {
+    setErroTamanhos(null);
+    setTamanhos((atuais) => atuais.filter((item) => item.tamanho !== tamanho));
+  }
+
+  /** Estoque do tamanho — número inteiro entre 0 e 9999. */
+  function definirQuantidade(tamanho: string, texto: string) {
+    const numero = Number.parseInt(texto, 10);
+    const quantidade =
+      Number.isFinite(numero) && numero >= 0 ? Math.min(numero, 9999) : 0;
+    setTamanhos((atuais) =>
+      atuais.map((item) =>
+        item.tamanho === tamanho ? { ...item, quantidade } : item,
+      ),
+    );
+  }
+
+  // ----------------------------------------------------------
+  // Envio
+  // ----------------------------------------------------------
+
+  async function aoEnviar(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+
+    // Modo EDIÇÃO: comportamento atual — confere e explica.
+    if (modo === "edicao") {
+      setConferido(false);
+      const novosErros: ErrosFormulario = {};
+      if (valores.nome.trim().length < 2) {
+        novosErros.nome = "Informe o nome da peça (ao menos 2 letras).";
+      }
+      const preco = paraNumero(valores.preco);
+      if (valores.preco.trim() === "") {
+        novosErros.preco = "Informe o preço da peça.";
+      } else if (preco === null || preco <= 0) {
+        novosErros.preco = "Preço inválido — use números, por exemplo: 189,90.";
+      }
+      if (!valores.categoriaSlug) {
+        novosErros.categoriaSlug = "Escolha uma categoria.";
+      }
+      setErros(novosErros);
+      if (Object.keys(novosErros).length === 0) {
+        setConferido(true);
+      }
+      return;
+    }
+
+    // Modo NOVO: validação completa antes de enviar.
+    const novosErros: ErrosFormulario = {};
     if (valores.nome.trim().length < 2) {
       novosErros.nome = "Informe o nome da peça (ao menos 2 letras).";
     }
@@ -122,32 +274,100 @@ export function FormularioProduto({
     if (!valores.categoriaSlug) {
       novosErros.categoriaSlug = "Escolha uma categoria.";
     }
-
+    if (cores.length === 0) {
+      novosErros.cores = "Escolha ao menos uma cor da peça.";
+    }
+    if (tamanhos.length === 0) {
+      novosErros.tamanhos = "Escolha ao menos um tamanho com estoque.";
+    }
     setErros(novosErros);
-    if (Object.keys(novosErros).length === 0) {
-      setConferido(true);
+    setErroEnvio(null);
+    if (Object.keys(novosErros).length > 0) return;
+
+    // Cadastro real: o servidor valida a sessão httpOnly e grava
+    // produto + cores + variações no Supabase.
+    setEnviando(true);
+    try {
+      const resposta = await fetch("/api/admin/produtos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: valores.nome.trim(),
+          preco,
+          categoriaSlug: valores.categoriaSlug,
+          descricao: valores.descricao.trim(),
+          composicao: valores.composicao.trim(),
+          cuidados: valores.cuidados.trim(),
+          destaque: valores.destaque,
+          cores: cores.map((cor) => ({ nome: cor.nome, hex: cor.hex })),
+          tamanhos: tamanhos.map((item) => ({
+            tamanho: item.tamanho,
+            quantidade: item.quantidade,
+          })),
+        }),
+      });
+
+      let dados: { ok?: boolean; slug?: string; mensagem?: string } = {};
+      try {
+        dados = (await resposta.json()) as typeof dados;
+      } catch {
+        // resposta sem corpo legível — segue com a mensagem padrão
+      }
+
+      if (!resposta.ok || !dados.ok) {
+        setErroEnvio({
+          mensagem:
+            dados.mensagem ?? "Não foi possível salvar a peça agora. Tente de novo.",
+          semSessao: resposta.status === 401,
+        });
+        return;
+      }
+
+      // Cadastrada: abre a peça no painel (estoque real dela).
+      router.push(
+        `/admin/produtos/${dados.slug}` as Route<"/admin/produtos/[slug]">,
+      );
+    } catch {
+      setErroEnvio({
+        mensagem:
+          "Não foi possível falar com o servidor agora. Verifique sua conexão e tente de novo.",
+        semSessao: false,
+      });
+    } finally {
+      setEnviando(false);
     }
   }
 
+  // ----------------------------------------------------------
+  // Render
+  // ----------------------------------------------------------
+
   return (
     <form onSubmit={aoEnviar} noValidate className="space-y-5">
-      <Aviso titulo="Formulário em preparação">
-        {modo === "novo"
-          ? "O cadastro no banco será habilitado junto com as migrações do painel e a tela de entrada (login). Por enquanto este formulário apenas confere os campos — nada é salvo."
-          : "As alterações serão gravadas quando a edição for conectada ao banco. Por enquanto este formulário apenas confere os campos — nada é salvo."}
-      </Aviso>
+      {modo === "edicao" ? (
+        <Aviso titulo="Edição em preparação">
+          As alterações serão gravadas quando a edição for conectada ao banco. Por
+          enquanto este formulário apenas confere os campos — nada é salvo.
+        </Aviso>
+      ) : (
+        <Aviso titulo="Ao salvar, a peça entra na loja como ativa">
+          O cadastro grava direto no banco: produto, cores e estoque de cada
+          tamanho. A peça fica VISÍVEL na loja pública de imediato — a opção de
+          rascunho chega depois de um ajuste de segurança.
+        </Aviso>
+      )}
 
-      {conferido && (
-        <Aviso tonalidade="info" titulo="Campos conferidos">
-          Tudo certo! Cores escolhidas: {coresSelecionadas.length === 0
-            ? "nenhuma"
-            : coresSelecionadas.join(", ")}
-          {" · "}Tamanhos escolhidos:{" "}
-          {tamanhosSelecionados.length === 0
-            ? "nenhum"
-            : tamanhosSelecionados.join(", ")}
-          . Quando a gravação for conectada, essas escolhas definem as
-          variações da peça. Nada foi gravado no banco.
+      {erroEnvio && (
+        <Aviso tonalidade="atencao" titulo="Não foi possível salvar">
+          {erroEnvio.mensagem}{" "}
+          {erroEnvio.semSessao && (
+            <Link
+              href="/admin/login"
+              className="font-medium text-gold-ink hover:underline"
+            >
+              Entrar de novo
+            </Link>
+          )}
         </Aviso>
       )}
 
@@ -189,16 +409,22 @@ export function FormularioProduto({
             </option>
           ))}
         </CampoSelect>
-        <CampoSelect
-          id="produto-status"
-          rotulo="Status"
-          value={valores.status}
-          onChange={(evento) => atualizar("status", evento.target.value as ValoresProduto["status"])}
-          dica="Rascunho = invisível na loja. A gravação real chega com a integração."
-        >
-          <option value="ativo">Ativo (visível na loja)</option>
-          <option value="rascunho">Rascunho (em preparação)</option>
-        </CampoSelect>
+        {/* Status: apenas na EDIÇÃO visual. O cadastro novo nasce
+            ATIVO (a opção de rascunho depende do ajuste de RLS). */}
+        {modo === "edicao" && (
+          <CampoSelect
+            id="produto-status"
+            rotulo="Status"
+            value={valores.status}
+            onChange={(evento) =>
+              atualizar("status", evento.target.value as ValoresProduto["status"])
+            }
+            dica="Rascunho = invisível na loja. A gravação real chega com a integração."
+          >
+            <option value="ativo">Ativo (visível na loja)</option>
+            <option value="rascunho">Rascunho (em preparação)</option>
+          </CampoSelect>
+        )}
       </div>
 
       <CampoArea
@@ -227,96 +453,314 @@ export function FormularioProduto({
         />
       </div>
 
-      {/* ----------------------------------------------------
-          Cores — opções reais das variações da loja.
-          Na edição, as cores atuais da peça já vêm marcadas.
-          ---------------------------------------------------- */}
-      <fieldset>
-        <legend className="text-sm font-medium text-ink">Cores</legend>
-        <p className="mt-1 text-xs leading-5 text-ink-soft">
-          Escolha uma ou mais cores da peça. As opções vêm das
-          variações reais da loja — a gravação chega com a integração.
-          {modo === "edicao" &&
-            " As cores atuais da peça já vêm marcadas."}
-        </p>
-        {coresDisponiveis.length > 0 ? (
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            {coresDisponiveis.map((cor) => {
-              const marcada = coresSelecionadas.includes(cor.nome);
-              return (
-                <button
-                  key={cor.nome}
-                  type="button"
-                  aria-pressed={marcada}
-                  aria-label={`${marcada ? "Desmarcar" : "Marcar"} cor ${cor.nome}`}
-                  onClick={() => alternarCor(cor.nome)}
-                  className={
-                    marcada
-                      ? "inline-flex items-center gap-2 rounded-full border border-gold bg-champagne px-4 py-2 text-sm font-medium text-gold-ink transition hover:border-gold-deep"
-                      : "inline-flex items-center gap-2 rounded-full border border-sand bg-ivory px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
-                  }
-                >
-                  <span
-                    aria-hidden="true"
-                    className="h-3.5 w-3.5 rounded-full border border-black/10"
-                    style={{ backgroundColor: cor.hex }}
-                  />
-                  {cor.nome}
-                  {marcada && <IconeCheck className="h-3.5 w-3.5" />}
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="mt-2.5 text-sm text-ink-soft">
-            Ainda não existe nenhuma cor nas variações da loja — quando
-            houver, as opções aparecem aqui.
+      {modo === "edicao" ? (
+        /* Cores da EDIÇÃO — toggles visuais das opções reais. */
+        <fieldset>
+          <legend className="text-sm font-medium text-ink">Cores</legend>
+          <p className="mt-1 text-xs leading-5 text-ink-soft">
+            Escolha uma ou mais cores da peça. As opções vêm das
+            variações reais da loja — a gravação chega com a integração.
+            As cores atuais da peça já vêm marcadas.
           </p>
-        )}
-      </fieldset>
+          {coresDisponiveis.length > 0 ? (
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {coresDisponiveis.map((cor) => {
+                const marcada = coresSelecionadas.includes(cor.nome);
+                return (
+                  <button
+                    key={cor.nome}
+                    type="button"
+                    aria-pressed={marcada}
+                    aria-label={`${marcada ? "Desmarcar" : "Marcar"} cor ${cor.nome}`}
+                    onClick={() => alternarCor(cor.nome)}
+                    className={
+                      marcada
+                        ? "inline-flex items-center gap-2 rounded-full border border-gold bg-champagne px-4 py-2 text-sm font-medium text-gold-ink transition hover:border-gold-deep"
+                        : "inline-flex items-center gap-2 rounded-full border border-sand bg-ivory px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
+                    }
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 rounded-full border border-black/10"
+                      style={{ backgroundColor: cor.hex }}
+                    />
+                    {cor.nome}
+                    {marcada && <IconeCheck className="h-3.5 w-3.5" />}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="mt-2.5 text-sm text-ink-soft">
+              Ainda não existe nenhuma cor nas variações da loja — quando
+              houver, as opções aparecem aqui.
+            </p>
+          )}
+        </fieldset>
+      ) : (
+        /* Cores do CADASTRO — sugestões + cor livre (nome + tom). */
+        <fieldset>
+          <legend className="text-sm font-medium text-ink">Cores</legend>
+          <p className="mt-1 text-xs leading-5 text-ink-soft">
+            Escolha cores da lista ou crie uma nova com o nome e o tom. Cada
+            cor ganha as fotos dela na próxima etapa (armazenamento).
+          </p>
+          {coresDisponiveis.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {coresDisponiveis.map((cor) => {
+                const marcada = jaTemCor(cor.nome);
+                return (
+                  <button
+                    key={cor.nome}
+                    type="button"
+                    aria-pressed={marcada}
+                    aria-label={`${marcada ? "Remover" : "Adicionar"} cor ${cor.nome}`}
+                    onClick={() => alternarCorSugestao(cor)}
+                    className={
+                      marcada
+                        ? "inline-flex items-center gap-2 rounded-full border border-gold bg-champagne px-4 py-2 text-sm font-medium text-gold-ink transition hover:border-gold-deep"
+                        : "inline-flex items-center gap-2 rounded-full border border-sand bg-ivory px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
+                    }
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 rounded-full border border-black/10"
+                      style={{ backgroundColor: cor.hex }}
+                    />
+                    {cor.nome}
+                    {marcada && <IconeCheck className="h-3.5 w-3.5" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
-      {/* ----------------------------------------------------
-          Tamanhos — opções reais das variações da loja.
-          Na edição, os tamanhos atuais já vêm marcados.
-          ---------------------------------------------------- */}
-      <fieldset>
-        <legend className="text-sm font-medium text-ink">Tamanhos</legend>
-        <p className="mt-1 text-xs leading-5 text-ink-soft">
-          Escolha um ou mais tamanhos da peça — cada tamanho com cada
-          cor vira uma variação quando a gravação for conectada.
-          {modo === "edicao" &&
-            " Os tamanhos atuais da peça já vêm marcados."}
-        </p>
-        {tamanhosDisponiveis.length > 0 ? (
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            {tamanhosDisponiveis.map((tamanho) => {
-              const marcado = tamanhosSelecionados.includes(tamanho);
-              return (
-                <button
-                  key={tamanho}
-                  type="button"
-                  aria-pressed={marcado}
-                  aria-label={`${marcado ? "Desmarcar" : "Marcar"} tamanho ${tamanho}`}
-                  onClick={() => alternarTamanho(tamanho)}
-                  className={
-                    marcado
-                      ? "inline-flex items-center gap-2 rounded-full border border-gold bg-champagne px-4 py-2 text-sm font-medium text-gold-ink transition hover:border-gold-deep"
-                      : "inline-flex items-center gap-2 rounded-full border border-sand bg-ivory px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
-                  }
-                >
-                  {tamanho}
-                  {marcado && <IconeCheck className="h-3.5 w-3.5" />}
-                </button>
-              );
-            })}
+          <div className="mt-3 flex flex-wrap items-end gap-3">
+            <CampoTexto
+              id="nova-cor-nome"
+              rotulo="Nova cor (nome)"
+              className="w-44"
+              value={novaCorNome}
+              onChange={(evento) => setNovaCorNome(evento.target.value)}
+              placeholder="Ex.: Off-white"
+            />
+            <div className="w-24">
+              <label
+                htmlFor="nova-cor-tom"
+                className="mb-1.5 block text-sm font-medium text-ink"
+              >
+                Tom
+              </label>
+              <input
+                id="nova-cor-tom"
+                type="color"
+                value={novaCorHex}
+                onChange={(evento) => setNovaCorHex(evento.target.value)}
+                className="h-11 w-full cursor-pointer rounded-xl border border-sand bg-ivory p-1"
+                aria-label="Tom da nova cor"
+              />
+            </div>
+            <Botao
+              type="button"
+              variante="secundario"
+              onClick={adicionarCorPersonalizada}
+            >
+              <IconeMais className="h-4 w-4" />
+              Adicionar cor
+            </Botao>
           </div>
-        ) : (
-          <p className="mt-2.5 text-sm text-ink-soft">
-            Ainda não existe nenhum tamanho nas variações da loja —
-            quando houver, as opções aparecem aqui.
+          {erroCores && (
+            <p role="alert" className="mt-1.5 text-xs text-[#a04b32]">
+              {erroCores}
+            </p>
+          )}
+          {erros.cores && (
+            <p role="alert" className="mt-1.5 text-xs text-[#a04b32]">
+              {erros.cores}
+            </p>
+          )}
+
+          {cores.length > 0 && (
+            <ul className="mt-3 space-y-2">
+              {cores.map((cor) => (
+                <li
+                  key={cor.nome}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-sand bg-ivory px-3.5 py-2.5"
+                >
+                  <span className="flex items-center gap-2.5 text-sm text-ink">
+                    <span
+                      aria-hidden="true"
+                      className="h-4 w-4 rounded-full border border-black/10"
+                      style={{ backgroundColor: cor.hex }}
+                    />
+                    {cor.nome}
+                    <span className="font-mono text-xs uppercase text-ink-soft">
+                      {cor.hex}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removerCor(cor.nome)}
+                    aria-label={`Remover cor ${cor.nome}`}
+                    className="rounded-full p-1.5 text-ink-soft transition hover:bg-sand hover:text-ink"
+                  >
+                    <IconeFechar className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </fieldset>
+      )}
+
+      {modo === "edicao" ? (
+        /* Tamanhos da EDIÇÃO — toggles visuais das opções reais. */
+        <fieldset>
+          <legend className="text-sm font-medium text-ink">Tamanhos</legend>
+          <p className="mt-1 text-xs leading-5 text-ink-soft">
+            Escolha um ou mais tamanhos da peça — cada tamanho com cada
+            cor vira uma variação quando a gravação for conectada.
+            Os tamanhos atuais da peça já vêm marcados.
           </p>
-        )}
-      </fieldset>
+          {tamanhosDisponiveis.length > 0 ? (
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {tamanhosDisponiveis.map((tamanho) => {
+                const marcado = tamanhosSelecionados.includes(tamanho);
+                return (
+                  <button
+                    key={tamanho}
+                    type="button"
+                    aria-pressed={marcado}
+                    aria-label={`${marcado ? "Desmarcar" : "Marcar"} tamanho ${tamanho}`}
+                    onClick={() => alternarTamanho(tamanho)}
+                    className={
+                      marcado
+                        ? "inline-flex items-center gap-2 rounded-full border border-gold bg-champagne px-4 py-2 text-sm font-medium text-gold-ink transition hover:border-gold-deep"
+                        : "inline-flex items-center gap-2 rounded-full border border-sand bg-ivory px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
+                    }
+                  >
+                    {tamanho}
+                    {marcado && <IconeCheck className="h-3.5 w-3.5" />}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="mt-2.5 text-sm text-ink-soft">
+              Ainda não existe nenhum tamanho nas variações da loja —
+              quando houver, as opções aparecem aqui.
+            </p>
+          )}
+        </fieldset>
+      ) : (
+        /* Tamanhos do CADASTRO — sugestões + tamanho livre com estoque. */
+        <fieldset>
+          <legend className="text-sm font-medium text-ink">
+            Tamanhos e estoque
+          </legend>
+          <p className="mt-1 text-xs leading-5 text-ink-soft">
+            Escolha os tamanhos e o estoque inicial de cada um. A quantidade
+            vale para todas as cores escolhidas — cada cor × tamanho vira uma
+            variação no estoque da loja.
+          </p>
+          {tamanhosDisponiveis.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {tamanhosDisponiveis.map((tamanho) => {
+                const marcado = jaTemTamanho(tamanho);
+                return (
+                  <button
+                    key={tamanho}
+                    type="button"
+                    aria-pressed={marcado}
+                    aria-label={`${marcado ? "Remover" : "Adicionar"} tamanho ${tamanho}`}
+                    onClick={() => alternarTamanhoSugestao(tamanho)}
+                    className={
+                      marcado
+                        ? "inline-flex items-center gap-2 rounded-full border border-gold bg-champagne px-4 py-2 text-sm font-medium text-gold-ink transition hover:border-gold-deep"
+                        : "inline-flex items-center gap-2 rounded-full border border-sand bg-ivory px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
+                    }
+                  >
+                    {tamanho}
+                    {marcado && <IconeCheck className="h-3.5 w-3.5" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="mt-3 flex flex-wrap items-end gap-3">
+            <CampoTexto
+              id="novo-tamanho"
+              rotulo="Novo tamanho"
+              className="w-44"
+              value={novoTamanho}
+              onChange={(evento) => setNovoTamanho(evento.target.value)}
+              placeholder="Ex.: 38"
+            />
+            <Botao
+              type="button"
+              variante="secundario"
+              onClick={adicionarTamanhoPersonalizado}
+            >
+              <IconeMais className="h-4 w-4" />
+              Adicionar tamanho
+            </Botao>
+          </div>
+          {erroTamanhos && (
+            <p role="alert" className="mt-1.5 text-xs text-[#a04b32]">
+              {erroTamanhos}
+            </p>
+          )}
+          {erros.tamanhos && (
+            <p role="alert" className="mt-1.5 text-xs text-[#a04b32]">
+              {erros.tamanhos}
+            </p>
+          )}
+
+          {tamanhos.length > 0 && (
+            <ul className="mt-3 space-y-2">
+              {tamanhos.map((item, indice) => (
+                <li
+                  key={item.tamanho}
+                  className="flex flex-wrap items-center gap-3 rounded-xl border border-sand bg-ivory px-3.5 py-2.5"
+                >
+                  <span className="flex-1 text-sm font-medium text-ink">
+                    {item.tamanho}
+                  </span>
+                  <label
+                    htmlFor={`estoque-${indice}`}
+                    className="text-xs text-ink-soft"
+                  >
+                    Estoque
+                  </label>
+                  <input
+                    id={`estoque-${indice}`}
+                    type="number"
+                    min={0}
+                    max={9999}
+                    step={1}
+                    inputMode="numeric"
+                    value={item.quantidade}
+                    onChange={(evento) =>
+                      definirQuantidade(item.tamanho, evento.target.value)
+                    }
+                    aria-label={`Estoque do tamanho ${item.tamanho}`}
+                    className="w-24 rounded-xl border border-sand bg-ivory px-3 py-1.5 text-sm text-ink focus:border-gold focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removerTamanho(item.tamanho)}
+                    aria-label={`Remover tamanho ${item.tamanho}`}
+                    className="rounded-full p-1.5 text-ink-soft transition hover:bg-sand hover:text-ink"
+                  >
+                    <IconeFechar className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </fieldset>
+      )}
 
       <CampoCheckbox
         id="produto-destaque"
@@ -326,18 +770,38 @@ export function FormularioProduto({
         onChange={(evento) => atualizar("destaque", evento.target.checked)}
       />
 
-      {/* Fotos: apenas a área preparada — o upload chega com o Storage (Etapa 10). */}
+      {/* Fotos: área preparada — o upload chega com o Storage (próxima etapa). */}
       <div>
         <p className="mb-1.5 block text-sm font-medium text-ink">Fotos da peça</p>
         <div className="rounded-xl border border-dashed border-sand bg-ivory px-4 py-8 text-center text-sm leading-6 text-ink-soft">
-          O envio de fotos chega com o armazenamento (Storage) na Etapa 10.
-          Hoje as páginas da loja mostram a foto demonstrativa.
+          O envio de fotos chega com o armazenamento (Storage) na próxima
+          etapa. Depois de salvar, as fotos entram pela página da peça.
         </div>
       </div>
 
+      {/* Confirmação da conferência (modo edição): AQUI, colada nos
+          botões, para o feedback aparecer onde o olho está após o clique. */}
+      {conferido && (
+        <Aviso tonalidade="info" titulo="Campos conferidos">
+          Tudo certo! Cores escolhidas: {coresSelecionadas.length === 0
+            ? "nenhuma"
+            : coresSelecionadas.join(", ")}
+          {" · "}Tamanhos escolhidos:{" "}
+          {tamanhosSelecionados.length === 0
+            ? "nenhum"
+            : tamanhosSelecionados.join(", ")}
+          . Quando a gravação for conectada, essas escolhas definem as
+          variações da peça. Nada foi gravado no banco.
+        </Aviso>
+      )}
+
       <div className="flex flex-wrap gap-3 border-t border-sand pt-5">
-        <Botao type="submit" variante="primario">
-          {modo === "novo" ? "Conferir cadastro" : "Conferir alterações"}
+        <Botao type="submit" variante="primario" disabled={enviando}>
+          {modo === "novo"
+            ? enviando
+              ? "Salvando…"
+              : "Salvar produto"
+            : "Conferir campos"}
         </Botao>
         <BotaoLink href="/admin/produtos" variante="suave">
           Cancelar

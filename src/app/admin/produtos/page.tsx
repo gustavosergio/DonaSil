@@ -1,14 +1,14 @@
 // ============================================================
 // DONA SIL — PAINEL — LISTA DE PRODUTOS
 // ============================================================
-// Lista REAL das peças ativas da loja (mesma leitura pública do
-// catálogo), com busca por nome, filtro por categoria e filtro
-// por situação do estoque — tudo pela URL, funciona sem JS.
+// Lista REAL das peças pela LEITURA ADMINISTRATIVA (token httpOnly
+// da sessão — ver src/lib/painel-crud.ts): ATIVAS e RASCUNHOS,
+// com busca por nome, filtro por categoria e filtro por situação
+// do estoque — tudo pela URL, funciona sem JS.
 //
-// Limites honestos desta etapa:
-//   * só peças ATIVAS aparecem (rascunhos exigem a integração
-//     de leitura administrativa, que chega com o login);
-//   * os botões de escrita estão desabilitados até a integração.
+// A loja pública continua mostrando só peças ativas. O CADASTRO
+// de peças novas já grava (ver /admin/produtos/novo); a edição
+// gravável chega em etapa futura.
 // ============================================================
 
 import type { Route } from "next";
@@ -18,10 +18,13 @@ import { formatarBRL } from "@/lib/format";
 import {
   CatalogoErro,
   listarCategorias,
-  listarProdutos,
   type CategoriaResumo,
-  type ProdutoResumo,
 } from "@/lib/catalogo";
+import {
+  PainelErro,
+  listarProdutosPainel,
+  type ProdutoResumoPainel,
+} from "@/lib/painel-crud";
 import { Aviso } from "@/components/admin/Aviso";
 import { BotaoLink } from "@/components/admin/Botao";
 import { EstadoVazio } from "@/components/admin/EstadoVazio";
@@ -54,7 +57,7 @@ export default function PaginaProdutosPainel(props: PageProps<"/admin/produtos">
     <>
       <TituloSecao
         titulo="Produtos"
-        descricao="Todas as peças ativas da loja, direto do catálogo. Use a busca e os filtros para encontrar uma peça."
+        descricao="Todas as peças do banco — ativas e rascunhos — pelo acesso de administradora. Use a busca e os filtros para encontrar uma peça."
         acoes={
           <BotaoLink href="/admin/produtos/novo">
             <IconeMais className="h-4 w-4" />
@@ -76,11 +79,11 @@ async function ConteudoProdutos({ searchParams }: PropsConteudo) {
   const filtros = lerFiltros(await searchParams);
 
   let categorias: CategoriaResumo[];
-  let produtos: ProdutoResumo[];
+  let produtos: ProdutoResumoPainel[];
   try {
     [categorias, produtos] = await Promise.all([
       listarCategorias(),
-      listarProdutos({
+      listarProdutosPainel({
         categoria: filtros.categoria ?? undefined,
         busca: filtros.busca ?? undefined,
       }),
@@ -99,6 +102,10 @@ async function ConteudoProdutos({ searchParams }: PropsConteudo) {
   const temFiltro =
     filtros.busca !== null || filtros.categoria !== null || filtros.situacao !== "todas";
 
+  // Contagem honesta por status (para o rodapé da lista).
+  const ativas = produtos.filter((produto) => produto.ativo).length;
+  const rascunhos = produtos.length - ativas;
+
   return (
     <>
       <FiltrosProdutos categorias={categorias} filtros={filtros} />
@@ -110,6 +117,7 @@ async function ConteudoProdutos({ searchParams }: PropsConteudo) {
               <Th>Produto</Th>
               <Th>Preço</Th>
               <Th>Categoria</Th>
+              <Th>Status</Th>
               <Th>Situação</Th>
               <Th className="text-right">Ações</Th>
             </tr>
@@ -123,6 +131,18 @@ async function ConteudoProdutos({ searchParams }: PropsConteudo) {
                 </Td>
                 <Td>{formatarBRL(produto.preco)}</Td>
                 <Td className="text-ink-soft">{produto.categoriaNome}</Td>
+                <Td>
+                  <div className="flex flex-wrap gap-1.5">
+                    {produto.ativo ? (
+                      <RotuloStatus tonalidade="ativo">Ativa</RotuloStatus>
+                    ) : (
+                      <RotuloStatus tonalidade="neutro">Rascunho</RotuloStatus>
+                    )}
+                    {produto.demo && (
+                      <RotuloStatus tonalidade="pendente">Demonstração</RotuloStatus>
+                    )}
+                  </div>
+                </Td>
                 <Td>
                   <div className="flex flex-wrap gap-1.5">
                     {produto.disponivel ? (
@@ -177,10 +197,11 @@ async function ConteudoProdutos({ searchParams }: PropsConteudo) {
       )}
 
       <p className="mt-4 text-xs leading-6 text-ink-soft">
-        {produtos.length}
-        {produtos.length === 1 ? " peça ativa" : " peças ativas"} listadas. Rascunhos
-        (peças fora da loja) só ficam visíveis depois da integração de leitura
-        administrativa.
+        {produtos.length} {produtos.length === 1 ? "peça" : "peças"} no banco:{" "}
+        {ativas} {ativas === 1 ? "ativa" : "ativas"}
+        {rascunhos > 0 &&
+          ` e ${rascunhos} ${rascunhos === 1 ? "rascunho" : "rascunhos"}`}
+        . Rascunhos não aparecem na loja pública.
       </p>
     </>
   );
@@ -269,12 +290,20 @@ function FiltrosProdutos({
 
 function AvisoErro({ erro }: { erro: unknown }) {
   const mensagem =
-    erro instanceof CatalogoErro
+    erro instanceof PainelErro || erro instanceof CatalogoErro
       ? erro.message
       : "Não foi possível carregar a lista de produtos agora.";
+  const semSessao = erro instanceof PainelErro && erro.tipo === "sessao";
   return (
     <Aviso tonalidade="atencao" titulo="Lista indisponível no momento">
-      {mensagem} Recarregue a página em alguns instantes.
+      {mensagem}{" "}
+      {semSessao ? (
+        <Link href="/admin/login" className="font-medium text-gold-ink hover:underline">
+          Entrar de novo
+        </Link>
+      ) : (
+        "Recarregue a página em alguns instantes."
+      )}
     </Aviso>
   );
 }
