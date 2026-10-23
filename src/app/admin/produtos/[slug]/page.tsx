@@ -6,9 +6,10 @@
 // ATIVAS e RASCUNHOS abrem aqui; a loja pública continua
 // mostrando só ativas. Inclui a tabela de estoque real por
 // variação, o ENVIO/EXCLUSÃO de fotos por cor (etapa 3) e o
-// formulário de edição preenchido (visual, sem gravação — o
-// CADASTRO de peças novas já grava; a edição gravável chega em
-// etapa futura).
+// formulário de edição com GRAVAÇÃO REAL dos dados editáveis
+// (nome, preço, categoria, descrição, composição, cuidados,
+// status e destaque — cores/tamanhos/estoque continuam somente
+// leitura até a migração das variações).
 // ============================================================
 
 import type { Metadata } from "next";
@@ -87,9 +88,9 @@ async function ConteudoProduto({ params }: PropsConteudo) {
     notFound();
   }
 
-  // Seleções atuais da peça: cores distintas e tamanhos distintos
-  // das variações reais — é o que aparece marcado no formulário.
-  const coresAtuais = produto.cores.map((cor) => cor.nome);
+  // Tamanhos distintos das variações reais da peça — é o que
+  // aparece na seção "Tamanhos (somente leitura)" do formulário.
+  // As cores reais vão direto do produto (leitura administrativa).
   const tamanhosAtuais = [
     ...new Set(produto.variacoes.map((variacao) => variacao.tamanho)),
   ].sort((a, b) => a.localeCompare(b, "pt-BR"));
@@ -199,13 +200,14 @@ async function ConteudoProduto({ params }: PropsConteudo) {
         <FotosProduto cores={produto.coresPainel} />
       </section>
 
-      {/* Formulário de edição (visual) */}
+      {/* Formulário de edição (gravação real dos dados editáveis) */}
       <section aria-labelledby="edicao-produto" className="mt-10">
         <h2 id="edicao-produto" className="mb-4 font-display text-lg font-semibold text-ink">
           Editar dados
         </h2>
         <FormularioProduto
           modo="edicao"
+          slug={produto.slug}
           categorias={categorias}
           coresDisponiveis={opcoes.cores}
           tamanhosDisponiveis={opcoes.tamanhos}
@@ -219,8 +221,8 @@ async function ConteudoProduto({ params }: PropsConteudo) {
             status: produto.ativo ? "ativo" : "rascunho",
             destaque: produto.destaque,
           }}
-          coresSelecionadasIniciais={coresAtuais}
-          tamanhosSelecionadosIniciais={tamanhosAtuais}
+          coresAtuais={produto.cores}
+          tamanhosAtuais={tamanhosAtuais}
         />
       </section>
     </>

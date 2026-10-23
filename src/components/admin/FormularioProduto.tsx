@@ -8,8 +8,13 @@
 //     POST /api/admin/produtos (Route Handler que valida a sessão
 //     httpOnly no servidor e grava produto + cores + variações
 //     no Supabase). A peça nasce ATIVA na loja.
-//   * modo "edicao" → visual honesto: valida os campos e avisa
-//     que a edição gravável chega em etapa futura. NADA é enviado.
+//   * modo "edicao" → GRAVAÇÃO REAL dos dados EDITÁVEIS: envia
+//     para PATCH /api/admin/produtos/[slug] (mesma validação de
+//     sessão + admin no servidor). Grava nome, preço, categoria,
+//     descrição, composição, cuidados, status (ativo/rascunho) e
+//     destaque. Cores, tamanhos e estoque ficam SOMENTE LEITURA
+//     (a migração das variações ainda não existe) e o slug da
+//     peça nunca muda — é a chave dos caminhos das fotos.
 //
 // Cores (modo novo): sugestões reais da loja + cor livre (nome +
 // tom #rrggbb). Tamanhos: sugestões reais + tamanho livre, cada um
@@ -44,7 +49,7 @@ export type ValoresProduto = {
   descricao: string;
   composicao: string;
   cuidados: string;
-  /** Status visual — usado apenas no modo edição (visual). */
+  /** Status da peça — gravação real na edição (o cadastro nasce ativo). */
   status: "ativo" | "rascunho";
   destaque: boolean;
 };
@@ -65,22 +70,25 @@ type ErrosFormulario = {
 
 export function FormularioProduto({
   modo,
+  slug,
   categorias,
   coresDisponiveis,
   tamanhosDisponiveis,
   valoresIniciais,
-  coresSelecionadasIniciais = [],
-  tamanhosSelecionadosIniciais = [],
+  coresAtuais = [],
+  tamanhosAtuais = [],
 }: {
   modo: "novo" | "edicao";
+  /** Endereço da peça no banco — alvo do PATCH (só na edição). */
+  slug?: string;
   categorias: CategoriaResumo[];
   coresDisponiveis: CorPeca[];
   tamanhosDisponiveis: string[];
   valoresIniciais?: ValoresProduto;
-  /** Nomes das cores que a peça já tem hoje (modo edição). */
-  coresSelecionadasIniciais?: string[];
-  /** Tamanhos que a peça já tem hoje (modo edição). */
-  tamanhosSelecionadosIniciais?: string[];
+  /** Cores reais que a peça tem hoje (modo edição — somente leitura). */
+  coresAtuais?: CorPeca[];
+  /** Tamanhos reais que a peça tem hoje (modo edição — somente leitura). */
+  tamanhosAtuais?: string[];
 }) {
   const router = useRouter();
   const [valores, setValores] = useState<ValoresProduto>(
@@ -95,13 +103,10 @@ export function FormularioProduto({
       destaque: false,
     },
   );
-  const [coresSelecionadas, setCoresSelecionadas] =
-    useState<string[]>(coresSelecionadasIniciais);
-  const [tamanhosSelecionados, setTamanhosSelecionados] =
-    useState<string[]>(tamanhosSelecionadosIniciais);
   const [erros, setErros] = useState<ErrosFormulario>({});
-  const [conferido, setConferido] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  /** Só fica true DEPOIS que o banco confirma a gravação. */
+  const [salvo, setSalvo] = useState(false);
   const [erroEnvio, setErroEnvio] = useState<{ mensagem: string; semSessao: boolean } | null>(
     null,
   );
@@ -116,29 +121,10 @@ export function FormularioProduto({
   const [erroTamanhos, setErroTamanhos] = useState<string | null>(null);
 
   function atualizar<K extends keyof ValoresProduto>(campo: K, valor: ValoresProduto[K]) {
+    // Qualquer edição depois de salvar apaga a confirmação
+    // antiga — o aviso de sucesso nunca fica velho na tela.
+    setSalvo(false);
     setValores((atuais) => ({ ...atuais, [campo]: valor }));
-  }
-
-  // ----------------------------------------------------------
-  // Modo EDIÇÃO — liga/desliga cores e tamanhos (visual, sem envio)
-  // ----------------------------------------------------------
-
-  function alternarCor(nome: string) {
-    setConferido(false);
-    setCoresSelecionadas((atuais) =>
-      atuais.includes(nome)
-        ? atuais.filter((cor) => cor !== nome)
-        : [...atuais, nome],
-    );
-  }
-
-  function alternarTamanho(nome: string) {
-    setConferido(false);
-    setTamanhosSelecionados((atuais) =>
-      atuais.includes(nome)
-        ? atuais.filter((tamanho) => tamanho !== nome)
-        : [...atuais, nome],
-    );
   }
 
   // ----------------------------------------------------------
@@ -237,9 +223,9 @@ export function FormularioProduto({
   async function aoEnviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
 
-    // Modo EDIÇÃO: comportamento atual — confere e explica.
+    // Modo EDIÇÃO: validação + GRAVAÇÃO REAL
+    // (PATCH /api/admin/produtos/[slug]).
     if (modo === "edicao") {
-      setConferido(false);
       const novosErros: ErrosFormulario = {};
       if (valores.nome.trim().length < 2) {
         novosErros.nome = "Informe o nome da peça (ao menos 2 letras).";
@@ -254,8 +240,74 @@ export function FormularioProduto({
         novosErros.categoriaSlug = "Escolha uma categoria.";
       }
       setErros(novosErros);
-      if (Object.keys(novosErros).length === 0) {
-        setConferido(true);
+      setSalvo(false);
+      setErroEnvio(null);
+      if (Object.keys(novosErros).length > 0) return;
+
+      if (!slug) {
+        setErroEnvio({
+          mensagem:
+            "Não foi possível identificar a peça — recarregue a página e tente de novo.",
+          semSessao: false,
+        });
+        return;
+      }
+
+      // Gravação: o servidor valida a sessão httpOnly, confirma o
+      // admin NO BANCO e grava por id (o alvo é o slug da URL).
+      // Sucesso só quando o banco devolve a linha alterada.
+      setEnviando(true);
+      try {
+        const resposta = await fetch(
+          `/api/admin/produtos/${encodeURIComponent(slug)}` as Route<
+            "/api/admin/produtos/[slug]"
+          >,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              nome: valores.nome.trim(),
+              preco,
+              categoriaSlug: valores.categoriaSlug,
+              descricao: valores.descricao.trim(),
+              composicao: valores.composicao.trim(),
+              cuidados: valores.cuidados.trim(),
+              ativo: valores.status === "ativo",
+              destaque: valores.destaque,
+            }),
+          },
+        );
+
+        let dados: { ok?: boolean; mensagem?: string } = {};
+        try {
+          dados = (await resposta.json()) as typeof dados;
+        } catch {
+          // resposta sem corpo legível — segue com a mensagem padrão
+        }
+
+        if (!resposta.ok || !dados.ok) {
+          // Erro: nada é apagado — o formulário mantém o que foi preenchido.
+          setErroEnvio({
+            mensagem:
+              dados.mensagem ?? "Não foi possível salvar as alterações agora. Tente de novo.",
+            semSessao: resposta.status === 401,
+          });
+          return;
+        }
+
+        // Gravado de verdade: confirma e atualiza as seções de
+        // servidor (resumo, selos, estoque, lista) sem perder o
+        // que está preenchido no formulário.
+        setSalvo(true);
+        router.refresh();
+      } catch {
+        setErroEnvio({
+          mensagem:
+            "Não foi possível falar com o servidor agora. Verifique sua conexão e tente de novo.",
+          semSessao: false,
+        });
+      } finally {
+        setEnviando(false);
       }
       return;
     }
@@ -345,9 +397,13 @@ export function FormularioProduto({
   return (
     <form onSubmit={aoEnviar} noValidate className="space-y-5">
       {modo === "edicao" ? (
-        <Aviso titulo="Edição em preparação">
-          As alterações serão gravadas quando a edição for conectada ao banco. Por
-          enquanto este formulário apenas confere os campos — nada é salvo.
+        <Aviso titulo="Ao salvar, as alterações são gravadas no banco">
+          Nome, preço, categoria, descrição, composição, cuidados, status e
+          destaque são gravados de verdade ao clicar em “Salvar alterações”.
+          Nesta etapa as cores, os tamanhos e o estoque continuam somente
+          leitura (a gravação deles chega com a migração das variações), e o
+          endereço da peça não muda — ele é usado nos links e nos caminhos
+          das fotos.
         </Aviso>
       ) : (
         <Aviso titulo="Ao salvar, a peça entra na loja como ativa">
@@ -409,8 +465,8 @@ export function FormularioProduto({
             </option>
           ))}
         </CampoSelect>
-        {/* Status: apenas na EDIÇÃO visual. O cadastro novo nasce
-            ATIVO (a opção de rascunho depende do ajuste de RLS). */}
+        {/* Status: apenas na EDIÇÃO — gravado pelo PATCH (rascunho
+            some da loja pública). O cadastro novo nasce ATIVO. */}
         {modo === "edicao" && (
           <CampoSelect
             id="produto-status"
@@ -419,7 +475,7 @@ export function FormularioProduto({
             onChange={(evento) =>
               atualizar("status", evento.target.value as ValoresProduto["status"])
             }
-            dica="Rascunho = invisível na loja. A gravação real chega com a integração."
+            dica="Rascunho = invisível na loja pública. A escolha é gravada ao salvar."
           >
             <option value="ativo">Ativo (visível na loja)</option>
             <option value="rascunho">Rascunho (em preparação)</option>
@@ -454,46 +510,38 @@ export function FormularioProduto({
       </div>
 
       {modo === "edicao" ? (
-        /* Cores da EDIÇÃO — toggles visuais das opções reais. */
+        /* Cores da EDIÇÃO — SOMENTE LEITURA: são as cores reais
+           que a peça tem hoje (leitura administrativa). A edição
+           de cores/variações chega com a migração (M2/M3) — nada
+           aqui é gravado nesta etapa. */
         <fieldset>
-          <legend className="text-sm font-medium text-ink">Cores</legend>
+          <legend className="text-sm font-medium text-ink">
+            Cores (somente leitura)
+          </legend>
           <p className="mt-1 text-xs leading-5 text-ink-soft">
-            Escolha uma ou mais cores da peça. As opções vêm das
-            variações reais da loja — a gravação chega com a integração.
-            As cores atuais da peça já vêm marcadas.
+            Estas são as cores reais da peça. A edição de cores, tamanhos e
+            estoque chega com a migração das variações — nada aqui é gravado
+            nesta etapa.
           </p>
-          {coresDisponiveis.length > 0 ? (
+          {coresAtuais.length > 0 ? (
             <div className="mt-2.5 flex flex-wrap gap-2">
-              {coresDisponiveis.map((cor) => {
-                const marcada = coresSelecionadas.includes(cor.nome);
-                return (
-                  <button
-                    key={cor.nome}
-                    type="button"
-                    aria-pressed={marcada}
-                    aria-label={`${marcada ? "Desmarcar" : "Marcar"} cor ${cor.nome}`}
-                    onClick={() => alternarCor(cor.nome)}
-                    className={
-                      marcada
-                        ? "inline-flex items-center gap-2 rounded-full border border-gold bg-champagne px-4 py-2 text-sm font-medium text-gold-ink transition hover:border-gold-deep"
-                        : "inline-flex items-center gap-2 rounded-full border border-sand bg-ivory px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
-                    }
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="h-3.5 w-3.5 rounded-full border border-black/10"
-                      style={{ backgroundColor: cor.hex }}
-                    />
-                    {cor.nome}
-                    {marcada && <IconeCheck className="h-3.5 w-3.5" />}
-                  </button>
-                );
-              })}
+              {coresAtuais.map((cor) => (
+                <span
+                  key={cor.nome}
+                  className="inline-flex items-center gap-2 rounded-full border border-gold bg-champagne px-4 py-2 text-sm font-medium text-gold-ink"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-3.5 w-3.5 rounded-full border border-black/10"
+                    style={{ backgroundColor: cor.hex }}
+                  />
+                  {cor.nome}
+                </span>
+              ))}
             </div>
           ) : (
             <p className="mt-2.5 text-sm text-ink-soft">
-              Ainda não existe nenhuma cor nas variações da loja — quando
-              houver, as opções aparecem aqui.
+              Esta peça não tem cores cadastradas nas variações.
             </p>
           )}
         </fieldset>
@@ -614,41 +662,32 @@ export function FormularioProduto({
       )}
 
       {modo === "edicao" ? (
-        /* Tamanhos da EDIÇÃO — toggles visuais das opções reais. */
+        /* Tamanhos da EDIÇÃO — SOMENTE LEITURA: os tamanhos reais
+           da peça; o estoque de cada variação está na tabela
+           "Estoque por variação" acima. */
         <fieldset>
-          <legend className="text-sm font-medium text-ink">Tamanhos</legend>
+          <legend className="text-sm font-medium text-ink">
+            Tamanhos (somente leitura)
+          </legend>
           <p className="mt-1 text-xs leading-5 text-ink-soft">
-            Escolha um ou mais tamanhos da peça — cada tamanho com cada
-            cor vira uma variação quando a gravação for conectada.
-            Os tamanhos atuais da peça já vêm marcados.
+            Estes são os tamanhos reais da peça — o estoque de cada variação
+            está na tabela acima. A edição de tamanhos e estoque chega com a
+            migração das variações.
           </p>
-          {tamanhosDisponiveis.length > 0 ? (
+          {tamanhosAtuais.length > 0 ? (
             <div className="mt-2.5 flex flex-wrap gap-2">
-              {tamanhosDisponiveis.map((tamanho) => {
-                const marcado = tamanhosSelecionados.includes(tamanho);
-                return (
-                  <button
-                    key={tamanho}
-                    type="button"
-                    aria-pressed={marcado}
-                    aria-label={`${marcado ? "Desmarcar" : "Marcar"} tamanho ${tamanho}`}
-                    onClick={() => alternarTamanho(tamanho)}
-                    className={
-                      marcado
-                        ? "inline-flex items-center gap-2 rounded-full border border-gold bg-champagne px-4 py-2 text-sm font-medium text-gold-ink transition hover:border-gold-deep"
-                        : "inline-flex items-center gap-2 rounded-full border border-sand bg-ivory px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
-                    }
-                  >
-                    {tamanho}
-                    {marcado && <IconeCheck className="h-3.5 w-3.5" />}
-                  </button>
-                );
-              })}
+              {tamanhosAtuais.map((tamanho) => (
+                <span
+                  key={tamanho}
+                  className="inline-flex items-center rounded-full border border-gold bg-champagne px-4 py-2 text-sm font-medium text-gold-ink"
+                >
+                  {tamanho}
+                </span>
+              ))}
             </div>
           ) : (
             <p className="mt-2.5 text-sm text-ink-soft">
-              Ainda não existe nenhum tamanho nas variações da loja —
-              quando houver, as opções aparecem aqui.
+              Esta peça não tem tamanhos cadastrados nas variações.
             </p>
           )}
         </fieldset>
@@ -770,38 +809,35 @@ export function FormularioProduto({
         onChange={(evento) => atualizar("destaque", evento.target.checked)}
       />
 
-      {/* Fotos: área preparada — o upload chega com o Storage (próxima etapa). */}
+      {/* Fotos: já existem — o upload, a visualização e a exclusão
+          acontecem na seção "Fotos por cor" desta mesma página. */}
       <div>
         <p className="mb-1.5 block text-sm font-medium text-ink">Fotos da peça</p>
         <div className="rounded-xl border border-dashed border-sand bg-ivory px-4 py-8 text-center text-sm leading-6 text-ink-soft">
-          O envio de fotos chega com o armazenamento (Storage) na próxima
-          etapa. Depois de salvar, as fotos entram pela página da peça.
+          As fotos são enviadas, vistas e excluídas na seção “Fotos por cor”
+          desta mesma página — nada aqui é gravado pelo formulário.
         </div>
       </div>
 
-      {/* Confirmação da conferência (modo edição): AQUI, colada nos
-          botões, para o feedback aparecer onde o olho está após o clique. */}
-      {conferido && (
-        <Aviso tonalidade="info" titulo="Campos conferidos">
-          Tudo certo! Cores escolhidas: {coresSelecionadas.length === 0
-            ? "nenhuma"
-            : coresSelecionadas.join(", ")}
-          {" · "}Tamanhos escolhidos:{" "}
-          {tamanhosSelecionados.length === 0
-            ? "nenhum"
-            : tamanhosSelecionados.join(", ")}
-          . Quando a gravação for conectada, essas escolhas definem as
-          variações da peça. Nada foi gravado no banco.
+      {/* Confirmação REAL da gravação (modo edição): AQUI, colada
+          nos botões, para o feedback aparecer onde o olho está
+          após o clique. Só aparece DEPOIS que o banco confirma. */}
+      {modo === "edicao" && salvo && (
+        <Aviso tonalidade="info" titulo="Alterações salvas">
+          As alterações foram gravadas no banco.{" "}
+          {valores.status === "rascunho"
+            ? "A peça está em rascunho: desapareceu da loja pública e continua aberta aqui no painel."
+            : "A peça está ativa: visível na loja pública."}
         </Aviso>
       )}
 
       <div className="flex flex-wrap gap-3 border-t border-sand pt-5">
         <Botao type="submit" variante="primario" disabled={enviando}>
-          {modo === "novo"
-            ? enviando
-              ? "Salvando…"
-              : "Salvar produto"
-            : "Conferir campos"}
+          {enviando
+            ? "Salvando…"
+            : modo === "novo"
+              ? "Salvar produto"
+              : "Salvar alterações"}
         </Botao>
         <BotaoLink href="/admin/produtos" variante="suave">
           Cancelar
