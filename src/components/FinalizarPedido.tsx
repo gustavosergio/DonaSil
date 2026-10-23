@@ -443,7 +443,10 @@ export default function FinalizarPedido({ faixas }: Props) {
       <p className="text-xs leading-6 text-ink-soft">
         Ao continuar, nenhum pedido é registrado: a Dona Sil recebe
         seu pedido pelo WhatsApp e confirma tudo com você — estoque,
-        pagamento e entrega.
+        pagamento e entrega. Seu nome e WhatsApp servem só para
+        confirmar o pedido e combinar a entrega — o atendimento é
+        feito pelo WhatsApp oficial da Dona Sil e nada é gravado no
+        site.
       </p>
     </form>
   );

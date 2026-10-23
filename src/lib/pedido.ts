@@ -14,7 +14,11 @@
 //   * O limite de 10 vale TAMBÉM na soma de linhas repetidas
 //     da mesma variação (passo 4b) — dividir o item em várias
 //     linhas não contorna o limite.
-//   * Campos da entrega: nome (≤200), whatsapp (≤30), cep
+//   * Campos da entrega: nome (≤200), whatsapp (DDD + número:
+//     (81) 99999-8888, (81) 3222-2222 ou 10-11 dígitos colados;
+//     ≤30 — o BANCO valida só presença/comprimento, aqui o
+//     formato é mais estrito de propósito: o servidor nunca
+//     confia que veio do navegador mascarado), cep
 //     (formato 00000-000, hífen opcional), endereco (≤300),
 //     complemento (≤200), bairro (≤120), cidade (≤120),
 //     uf (2 letras maiúsculas).
@@ -309,6 +313,14 @@ export const dadosEntregaSchema = z.object({
     .string()
     .trim()
     .min(1, "Informe o WhatsApp para combinarmos a entrega.")
+    // DDD OBRIGATÓRIO: aceita o formato da máscara do site
+    // ("(81) 99999-8888" celular / "(81) 3222-2222" fixo) ou
+    // 10-11 dígitos colados ("81999998888") — 10-11 dígitos
+    // significam DDD (2) + número (8 fixo / 9 celular).
+    .regex(
+      /^(\(\d{2}\) \d{4,5}-\d{4}|\d{10,11})$/,
+      "WhatsApp inválido — informe o DDD e o número, ex.: (81) 99999-8888.",
+    )
     .max(30, "O WhatsApp é muito longo."),
   cep: z
     .string()
