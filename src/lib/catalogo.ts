@@ -167,6 +167,7 @@ export type ProdutoCompleto = {
   cuidados: string;
   preco: number;
   fotos: string[];
+  galeria: string[];
   ativo: boolean;
   destaque: boolean;
   demo: boolean;
@@ -304,6 +305,12 @@ function paraResumo(linha: ProdutoResumoLinha): ProdutoResumo {
   };
 }
 
+export function fotosDaGaleria(cores: Array<{ ordem: number; produto_fotos: Array<{ caminho: string; ordem: number }> }>): string[] {
+  return [...new Set([...cores].sort((a, b) => a.ordem - b.ordem)
+    .flatMap(cor => [...cor.produto_fotos].sort((a, b) => a.ordem - b.ordem))
+    .map(foto => urlPublicaFoto(foto.caminho)).filter(Boolean))];
+}
+
 function paraCompleto(linha: ProdutoDetalheLinha): ProdutoCompleto {
   const variacoes: VariacaoEstoque[] = [...linha.variacoes]
     .sort(compararVariacoes)
@@ -323,6 +330,7 @@ function paraCompleto(linha: ProdutoDetalheLinha): ProdutoCompleto {
     cuidados: linha.cuidados,
     preco: linha.preco,
     fotos: linha.fotos,
+    galeria: fotosDaGaleria(linha.produto_cores),
     ativo: linha.ativo,
     destaque: linha.destaque,
     demo: linha.demo,

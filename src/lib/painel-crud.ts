@@ -31,7 +31,7 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 import { COOKIE_TOKEN } from "@/lib/painel-auth";
 import type { CorPainel } from "@/lib/fotos";
-import { escolherCapa } from "@/lib/catalogo";
+import { escolherCapa, fotosDaGaleria } from "@/lib/catalogo";
 import type {
   CorPeca,
   ProdutoCompleto,
@@ -337,6 +337,7 @@ function paraCompletoPainel(linha: ProdutoDetalheLinha): ProdutoDetalhePainel {
     cuidados: linha.cuidados,
     preco: linha.preco,
     fotos: linha.fotos,
+    galeria: fotosDaGaleria(linha.produto_cores),
     ativo: linha.ativo,
     destaque: linha.destaque,
     demo: linha.demo,

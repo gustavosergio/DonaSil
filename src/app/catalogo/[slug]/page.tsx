@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { formatarBRL } from "@/lib/format";
 import { CatalogoErro, obterProduto, type ProdutoCompleto } from "@/lib/catalogo";
 import AdicionarASacola from "@/components/AdicionarASacola";
+import GaleriaPeca from "@/components/GaleriaPeca";
 import { MODO_DEMO } from "@/lib/site";
 
 type Props = PageProps<"/catalogo/[slug]">;
@@ -83,7 +84,7 @@ async function DetalheProduto({ params }: Pick<Props, "params">) {
       {/* Capa real (primeira foto da primeira cor com fotos —
           regra em src/lib/catalogo.ts); sem foto segue o
           placeholder "Foto demonstrativa". */}
-      <div className="relative aspect-[3/4] overflow-hidden rounded-3xl bg-champagne">
+      {produto.galeria.length > 0 ? <GaleriaPeca key={produto.id} fotos={produto.galeria} nome={produto.nome} /> : <div className="relative aspect-[3/4] overflow-hidden rounded-3xl bg-champagne">
         {produto.capa ? (
           /* <img> simples — bucket externo do Supabase; o
              next/image exigiria remotePatterns no next.config
@@ -103,7 +104,7 @@ async function DetalheProduto({ params }: Pick<Props, "params">) {
             </div>
           </>
         )}
-      </div>
+      </div>}
 
       <div>
         <p className="text-xs uppercase tracking-[0.35em] text-gold-ink">

@@ -12,7 +12,7 @@ async function verificar(modoDemo) {
   modulo.paths = Module._nodeModulePaths(path.dirname(arquivo));
   modulo.require = (nome) => {
     if (nome === '@/lib/site') return { MODO_DEMO: modoDemo };
-    if (nome === '@/lib/fotos') return { urlPublicaFoto: () => null };
+    if (nome === '@/lib/fotos') return { urlPublicaFoto: caminho => `https://catalogo.invalid/fotos/${caminho}` };
     if (nome === 'react') return { cache: (fn) => fn };
     return module.require(nome);
   };
@@ -20,6 +20,14 @@ async function verificar(modoDemo) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText, arquivo);
   const consultas = [];
+  const cores = [
+    { ordem: 1, produto_fotos: [{ caminho: 'ultima.jpg', ordem: 0 }] },
+    { ordem: 0, produto_fotos: [{ caminho: 'segunda.jpg', ordem: 1 }, { caminho: 'capa.jpg', ordem: 0 }, { caminho: 'capa.jpg', ordem: 2 }] },
+  ];
+  const antes = JSON.stringify(cores);
+  assert.deepEqual(modulo.exports.fotosDaGaleria(cores), ['capa.jpg', 'segunda.jpg', 'ultima.jpg'].map(foto => `https://catalogo.invalid/fotos/${foto}`));
+  assert.equal(JSON.stringify(cores), antes, 'Ordenação não deve alterar os registros recebidos');
+  assert.deepEqual(modulo.exports.fotosDaGaleria([]), []);
   global.fetch = async (url) => {
     consultas.push(new URL(url));
     return new Response('[]', { status: 200 });

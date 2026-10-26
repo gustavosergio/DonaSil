@@ -1,0 +1,238 @@
+{
+  "origem": "https://www.instagram.com/saldosdonasil/",
+  "situacao": "Importado e conferido no Supabase em 2026-10-26. Estoque inicial autorizado pelo usuario: uma unidade de cada peca.",
+  "produtos": [
+    {
+      "post": "DY7hP30OMzK",
+      "nome": "Calça rosa",
+      "tamanho": "G1",
+      "preco": 30,
+      "quantidade": 1,
+      "fotos": [
+        "710192809_18097755389014007_2091968888943776627_n.jpg"
+      ],
+      "observacao": "Somente calça; blusa branca não incluída.",
+      "slug": "calca-rosa-dy7hp30omzk",
+      "id": "0791d184-7696-4a83-ae88-c80f85be7781",
+      "importado": true
+    },
+    {
+      "post": "DY7g_djOgGj",
+      "nome": "Calça verde",
+      "tamanho": "G",
+      "preco": 20,
+      "quantidade": 1,
+      "fotos": [
+        "709636396_18097755053014007_3076745803863146618_n.jpg"
+      ],
+      "observacao": "Somente calça; blusa branca não incluída.",
+      "slug": "calca-verde-dy7g_djoggj",
+      "id": "8a72c6f6-5bbd-4228-aee4-913007379f46",
+      "importado": true
+    },
+    {
+      "post": "DY7g95OuiDU",
+      "nome": "Calça rosa com bolsos",
+      "tamanho": "M",
+      "preco": 50,
+      "quantidade": 1,
+      "fotos": [
+        "708068139_18097755035014007_1763098057458312525_n.jpg"
+      ],
+      "slug": "calca-rosa-com-bolsos-dy7g95ouidu",
+      "id": "b7815abc-5141-4a94-a9e1-b89cfc96a1c6",
+      "importado": true
+    },
+    {
+      "post": "DY7g8loOsse",
+      "nome": "Vestido de onça com recortes",
+      "tamanho": "M",
+      "preco": 5,
+      "quantidade": 1,
+      "fotos": [
+        "712266601_18097754912014007_4761581436601133075_n.jpg"
+      ],
+      "slug": "vestido-de-onca-com-recortes-dy7g8loosse",
+      "id": "63d97bbb-fce9-4655-a952-7d6f32ffc6f1",
+      "importado": true
+    },
+    {
+      "post": "DY7g57LOAdq",
+      "nome": "Vestido vermelho com recortes",
+      "tamanho": "M",
+      "preco": 30,
+      "quantidade": 1,
+      "fotos": [
+        "712179075_18097754870014007_6106452470621388404_n.jpg"
+      ],
+      "slug": "vestido-vermelho-com-recortes-dy7g57loadq",
+      "id": "ef18ad02-f8e6-4877-a1f9-d03dd3131c56",
+      "importado": true
+    },
+    {
+      "post": "DY7gzhJOAJx",
+      "nome": "Vestido preto com brilho e recortes",
+      "tamanho": "M",
+      "preco": 30,
+      "quantidade": 1,
+      "fotos": [
+        "709735801_18097754759014007_5029839637308449736_n.jpg"
+      ],
+      "slug": "vestido-preto-com-brilho-e-recortes-dy7gzhjoajx",
+      "id": "8491d537-859e-4c97-a486-a35b1a8c8e81",
+      "importado": true
+    },
+    {
+      "post": "DY7gwLeO2tN",
+      "nome": "Vestido claro com flores",
+      "tamanho": "M",
+      "preco": 50,
+      "quantidade": 1,
+      "fotos": [
+        "709771066_18097754720014007_4521605636216920651_n.jpg"
+      ],
+      "slug": "vestido-claro-com-flores-dy7gwleo2tn",
+      "id": "37b822c4-df78-440a-af25-8bacd5c90c27",
+      "importado": true
+    },
+    {
+      "post": "DY7guUeufuh",
+      "nome": "Conjunto claro de blusa e saia longa",
+      "tamanho": "M/G",
+      "preco": 50,
+      "quantidade": 1,
+      "fotos": [
+        "709101706_18097754693014007_6261215189281918451_n.jpg"
+      ],
+      "slug": "conjunto-claro-de-blusa-e-saia-longa-dy7guueufuh",
+      "id": "ae23f19b-e1e1-4e42-ab0d-dcb10c227fd7",
+      "importado": true
+    },
+    {
+      "post": "DY5IougFPeb",
+      "nome": "Blusa floral colorida",
+      "tamanho": "P",
+      "preco": 20,
+      "quantidade": 1,
+      "fotos": [
+        "708987146_18097593053014007_6503797378897608082_n.jpg",
+        "710478752_18097593062014007_2121110598272865706_n.jpg"
+      ],
+      "slug": "blusa-floral-colorida-dy5iougfpeb",
+      "id": "e4c92a6e-712c-4796-a5b3-4988157371f4",
+      "importado": true
+    },
+    {
+      "post": "DY5Ij2bFBkI",
+      "nome": "Blusa estampada de alças com babados",
+      "tamanho": "GG",
+      "preco": 20,
+      "quantidade": 1,
+      "fotos": [
+        "709226786_18097592846014007_5214418234722616193_n.jpg",
+        "708595499_18097592855014007_8686929797241798566_n.jpg"
+      ],
+      "slug": "blusa-estampada-de-alcas-com-babados-dy5ij2bfbki",
+      "id": "f1a2f823-9480-4603-a6c5-48c8b83dfdd4",
+      "importado": true
+    },
+    {
+      "post": "DY5GfrTFFgm",
+      "nome": "Macaquito laranja de folhagens",
+      "tamanho": "P/M",
+      "preco": 45,
+      "quantidade": 1,
+      "fotos": [
+        "707884983_18097589474014007_3632748885465734937_n.jpg",
+        "708222999_18097589486014007_6530931010434603047_n.jpg"
+      ],
+      "slug": "macaquito-laranja-de-folhagens-dy5gfrtffgm",
+      "id": "7f51e091-a106-4d46-a287-9933b2c2261a",
+      "importado": true
+    },
+    {
+      "post": "DY5Gc6rlCBc",
+      "nome": "Macaquito azul estampado",
+      "tamanho": "P/M",
+      "preco": 45,
+      "quantidade": 1,
+      "fotos": [
+        "709882774_18097589429014007_8205944011370117636_n.jpg",
+        "708209789_18097589444014007_956007416696671803_n.jpg"
+      ],
+      "slug": "macaquito-azul-estampado-dy5gc6rlcbc",
+      "id": "b5b8ffd5-a20d-403a-af7c-bf5aba6dc387",
+      "importado": true
+    },
+    {
+      "post": "DY5GW-LFI54",
+      "nome": "Macaquito floral de alças",
+      "tamanho": "P",
+      "preco": 50,
+      "quantidade": 1,
+      "fotos": [
+        "709023959_18097589252014007_4492326378232194276_n.jpg",
+        "708595485_18097589264014007_3702659842350421857_n.jpg"
+      ],
+      "slug": "macaquito-floral-de-alcas-dy5gw-lfi54",
+      "id": "55013f7f-1568-4b90-ac9c-5fab4dee34d3",
+      "importado": true
+    },
+    {
+      "post": "DY5GTnzlNnL",
+      "nome": "Macaquito azul com flores amarelas",
+      "tamanho": "P",
+      "preco": 50,
+      "quantidade": 1,
+      "fotos": [
+        "708254344_18097589108014007_2121193706615032051_n.jpg",
+        "709205772_18097589117014007_3128797047651537919_n.jpg"
+      ],
+      "slug": "macaquito-azul-com-flores-amarelas-dy5gtnzlnnl",
+      "id": "acac7771-4785-4c8a-ae1d-99aa3688983c",
+      "importado": true
+    },
+    {
+      "post": "DY5GOpSlFOM",
+      "nome": "Macaquito floral com babados",
+      "tamanho": "M/G",
+      "preco": 50,
+      "quantidade": 1,
+      "fotos": [
+        "708882051_18097589042014007_7355093452037582998_n.jpg",
+        "711474245_18097589051014007_5006967646907022747_n.jpg"
+      ],
+      "slug": "macaquito-floral-com-babados-dy5gopslfom",
+      "id": "abbcd85f-6ad7-4590-adca-67ce9c26ed04",
+      "importado": true
+    },
+    {
+      "post": "DY5GL3IlCy5",
+      "nome": "Macaquito verde com recortes",
+      "tamanho": "M/G",
+      "preco": 50,
+      "quantidade": 1,
+      "fotos": [
+        "707962781_18097588982014007_5512081131803351283_n.jpg",
+        "708300174_18097588991014007_8621922182613574785_n.jpg"
+      ],
+      "slug": "macaquito-verde-com-recortes-dy5gl3ilcy5",
+      "id": "f889a11b-caeb-4580-abda-836d11a2b0e9",
+      "importado": true
+    },
+    {
+      "post": "DY5GITuFNMn",
+      "nome": "Macaquito estampado de pássaros",
+      "tamanho": "M/G",
+      "preco": 50,
+      "quantidade": 1,
+      "fotos": [
+        "709078457_18097588946014007_5972450737391914925_n.jpg",
+        "688505652_18097588958014007_4135003402509152079_n.jpg"
+      ],
+      "slug": "macaquito-estampado-de-passaros-dy5gitufnmn",
+      "id": "a1f5b7de-b79f-4f62-add8-e11a13ad8122",
+      "importado": true
+    }
+  ]
+}
