@@ -1,33 +1,69 @@
 // ============================================================
 // DONA SIL — PAINEL — PEDIDOS
 // ============================================================
-// Os pedidos ficam guardados com segurança no banco — a leitura
-// deles é exclusiva de administradoras e chega junto com a
-// integração do painel (login). Enquanto isso, esta página traz:
-//   * os filtros por status já funcionando (sobre a lista vazia);
-//   * a tabela preparada (nº, data, valor, status);
-//   * um estado vazio verdadeiro — nenhum pedido fictício.
+// Lista REAL dos pedidos pela LEITURA ADMINISTRATIVA (token
+// httpOnly da sessão — ver src/lib/painel-crud.ts): número,
+// data, cliente, valor e status, com filtro por status pela URL
+// (funciona sem JavaScript).
+//
+// Somente administradoras chegam até aqui: o portão
+// (src/proxy.ts) exige sessão, e quem decide a leitura é o
+// POSTGRES (política leitura_admin_pedidos — SELECT para
+// authenticated, USING existe_admin). A tabela não tem grant de
+// escrita: este painel NÃO altera pedidos.
+//
+// A loja está em modo demonstração: o checkout é concluído pelo
+// WhatsApp e NÃO grava pedidos — a lista real fica vazia até a
+// integração de gravação (etapa futura). Nenhum pedido fictício
+// é exibido, em nenhuma circunstância.
 // ============================================================
 
-import Link from "next/link";
 import type { Route } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
+import { formatarBRL } from "@/lib/format";
+import {
+  PainelErro,
+  STATUS_PEDIDO,
+  listarPedidosPainel,
+  type PedidoResumoPainel,
+  type StatusPedido,
+} from "@/lib/painel-crud";
 import { Aviso } from "@/components/admin/Aviso";
+import { BotaoLink } from "@/components/admin/Botao";
 import { EstadoVazio } from "@/components/admin/EstadoVazio";
+import { IconeOlho } from "@/components/admin/Icones";
 import { RotuloStatus, type TonalidadeRotulo } from "@/components/admin/RotuloStatus";
 import { Tabela, Td, Th } from "@/components/admin/Tabela";
 import { TituloSecao } from "@/components/admin/TituloSecao";
 import { MODO_DEMO } from "@/lib/site";
 
-/** Status previstos no banco (tabela pedidos). */
-const STATUS = [
-  { valor: "pendente", rotulo: "Pendente", tonalidade: "pendente" as TonalidadeRotulo },
-  { valor: "confirmada", rotulo: "Confirmada", tonalidade: "ativo" as TonalidadeRotulo },
-  { valor: "enviada", rotulo: "Enviada", tonalidade: "neutro" as TonalidadeRotulo },
-  { valor: "entregue", rotulo: "Entregue", tonalidade: "ativo" as TonalidadeRotulo },
-  { valor: "cancelada", rotulo: "Cancelada", tonalidade: "esgotado" as TonalidadeRotulo },
-  { valor: "expirada", rotulo: "Expirada", tonalidade: "esgotado" as TonalidadeRotulo },
-];
+/** Rótulo e cor de cada status previsto no banco. */
+const ROTULOS: Record<
+  StatusPedido,
+  { rotulo: string; tonalidade: TonalidadeRotulo }
+> = {
+  pendente: { rotulo: "Pendente", tonalidade: "pendente" },
+  confirmada: { rotulo: "Confirmada", tonalidade: "ativo" },
+  enviada: { rotulo: "Enviada", tonalidade: "neutro" },
+  entregue: { rotulo: "Entregue", tonalidade: "ativo" },
+  cancelada: { rotulo: "Cancelada", tonalidade: "esgotado" },
+  expirada: { rotulo: "Expirada", tonalidade: "esgotado" },
+};
+
+/** Chips de filtro — derivados da fonte única (painel-crud.ts). */
+const CHIPS = STATUS_PEDIDO.map((valor) => ({ valor, ...ROTULOS[valor] }));
+
+/** Data/hora no fuso da loja (Recife) — a página roda no servidor. */
+const FORMATO_DATA = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: "America/Recife",
+});
+
+function formatarData(data: Date): string {
+  return FORMATO_DATA.format(data);
+}
 
 function primeiroValor(valor: string | string[] | undefined): string | null {
   if (Array.isArray(valor)) return valor[0] ?? null;
@@ -39,19 +75,18 @@ export default function PaginaPedidos(props: PageProps<"/admin/pedidos">) {
     <>
       <TituloSecao
         titulo="Pedidos"
-        descricao="Os pedidos que a loja receber ficarão listados aqui, com número, data, valor e status."
+        descricao="Os pedidos reais do banco — número, data, cliente, valor e status — pela leitura exclusiva de administradoras."
       />
 
       {MODO_DEMO && (
         <Aviso tonalidade="atencao" titulo="Nenhum pedido pode existir por enquanto">
           A loja está em modo demonstração: a finalização de compra é enviada por
-          WhatsApp e não grava pedidos no banco. Além disso, a leitura de pedidos
-          é exclusiva de administradoras — ela será integrada junto com a tela
-          de entrada (login).
+          WhatsApp e não grava pedidos no banco. A lista abaixo lê os pedidos
+          REAIS do banco — e, por enquanto, nenhum pode existir.
         </Aviso>
       )}
 
-      <Suspense fallback={null}>
+      <Suspense fallback={<EsqueletoPedidos />}>
         <ConteudoPedidos searchParams={props.searchParams} />
       </Suspense>
     </>
@@ -59,7 +94,7 @@ export default function PaginaPedidos(props: PageProps<"/admin/pedidos">) {
 }
 
 // ------------------------------------------------------------
-// Conteúdo com filtro por status (sobre a lista vazia real)
+// Conteúdo: lista real + filtro por status pela URL
 // ------------------------------------------------------------
 
 type PropsConteudo = Pick<PageProps<"/admin/pedidos">, "searchParams">;
@@ -67,11 +102,23 @@ type PropsConteudo = Pick<PageProps<"/admin/pedidos">, "searchParams">;
 async function ConteudoPedidos({ searchParams }: PropsConteudo) {
   const filtros = await searchParams;
   const statusEscolhido = primeiroValor(filtros.status);
+  const comFiltro = statusEscolhido !== null;
+
+  // Lista REAL — somente leitura com o token da sessão. O filtro
+  // de status roda no banco; valor fora da lista canônica é
+  // ignorado (equivale a "todos"). Erros NUNCA viram lista vazia.
+  let pedidos: PedidoResumoPainel[];
+  try {
+    pedidos = await listarPedidosPainel({
+      status: statusEscolhido ?? undefined,
+    });
+  } catch (erro) {
+    return <AvisoErro erro={erro} />;
+  }
 
   return (
     <>
-      {/* Filtros por status — funcionam sobre a lista (vazia) e
-          continuam prontos para quando os pedidos chegarem. */}
+      {/* Filtros por status — pela URL, funciona sem JavaScript. */}
       <nav aria-label="Filtrar pedidos por status" className="my-6">
         <ul className="flex flex-wrap gap-2">
           <li>
@@ -87,7 +134,7 @@ async function ConteudoPedidos({ searchParams }: PropsConteudo) {
               Todos
             </Link>
           </li>
-          {STATUS.map((status) => (
+          {CHIPS.map((status) => (
             <li key={status.valor}>
               <Link
                 href={`/admin/pedidos?status=${status.valor}` as Route<"/admin/pedidos">}
@@ -105,28 +152,70 @@ async function ConteudoPedidos({ searchParams }: PropsConteudo) {
         </ul>
       </nav>
 
-      {/* Tabela preparada + estado vazio verdadeiro */}
-      <Tabela>
-        <thead>
-          <tr>
-            <Th>Pedido</Th>
-            <Th>Data</Th>
-            <Th>Cliente</Th>
-            <Th className="text-right">Valor</Th>
-            <Th>Status</Th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <Td colSpan={5} className="p-0">
-              <EstadoVazio
-                titulo="Nenhum pedido para mostrar"
-                descricao="Nenhum pedido foi criado — e nenhum dado de exemplo é exibido aqui. Quando a loja começar a vender de verdade e a leitura administrativa for integrada, os pedidos reais aparecem nesta lista."
-              />
-            </Td>
-          </tr>
-        </tbody>
-      </Tabela>
+      {/* Lista real + estado vazio verdadeiro */}
+      {pedidos.length > 0 ? (
+        <Tabela>
+          <thead>
+            <tr>
+              <Th>Pedido</Th>
+              <Th>Data</Th>
+              <Th>Cliente</Th>
+              <Th className="text-right">Valor</Th>
+              <Th>Status</Th>
+              <Th className="text-right">Ações</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {pedidos.map((pedido) => (
+              <tr key={pedido.id}>
+                <Td className="font-medium">{pedido.codigo}</Td>
+                <Td className="text-ink-soft">{formatarData(pedido.criadoEm)}</Td>
+                <Td>{pedido.nomeCliente}</Td>
+                <Td className="text-right">{formatarBRL(pedido.total)}</Td>
+                <Td>
+                  <RotuloStatus tonalidade={ROTULOS[pedido.status].tonalidade}>
+                    {ROTULOS[pedido.status].rotulo}
+                  </RotuloStatus>
+                </Td>
+                <Td>
+                  <div className="flex justify-end gap-2">
+                    <BotaoLink
+                      href={`/admin/pedidos/${pedido.id}` as Route<"/admin/pedidos/[id]">}
+                      tamanho="compacto"
+                      variante="secundario"
+                      aria-label={`Ver detalhes do pedido ${pedido.codigo}`}
+                    >
+                      <IconeOlho className="h-3.5 w-3.5" />
+                      Detalhes
+                    </BotaoLink>
+                  </div>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Tabela>
+      ) : (
+        <EstadoVazio
+          titulo={comFiltro ? "Nenhum pedido com este status" : "Nenhum pedido ainda"}
+          descricao={
+            comFiltro
+              ? "Nenhum pedido tem este status agora — limpe o filtro para ver todos os pedidos."
+              : "Nenhum pedido foi criado — e nenhum dado de exemplo é exibido aqui. Quando a loja começar a vender de verdade, os pedidos reais aparecem nesta lista."
+          }
+          acao={
+            comFiltro ? (
+              <BotaoLink href="/admin/pedidos" variante="secundario">
+                Limpar filtro
+              </BotaoLink>
+            ) : undefined
+          }
+        />
+      )}
+
+      <p className="mt-4 text-xs leading-6 text-ink-soft">
+        {pedidos.length} {pedidos.length === 1 ? "pedido" : "pedidos"} no banco
+        {comFiltro ? " com este status" : ""}.
+      </p>
 
       {/* Legenda dos status previstos no banco */}
       <section aria-labelledby="legenda-status" className="mt-8">
@@ -134,7 +223,7 @@ async function ConteudoPedidos({ searchParams }: PropsConteudo) {
           Status de pedido previstos no banco
         </h2>
         <ul className="mt-3 flex flex-wrap gap-2">
-          {STATUS.map((status) => (
+          {CHIPS.map((status) => (
             <li key={status.valor}>
               <RotuloStatus tonalidade={status.tonalidade}>{status.rotulo}</RotuloStatus>
             </li>
@@ -146,5 +235,43 @@ async function ConteudoPedidos({ searchParams }: PropsConteudo) {
         </p>
       </section>
     </>
+  );
+}
+
+// ------------------------------------------------------------
+// Estados auxiliares
+// ------------------------------------------------------------
+
+function AvisoErro({ erro }: { erro: unknown }) {
+  const mensagem =
+    erro instanceof PainelErro
+      ? erro.message
+      : "Não foi possível carregar a lista de pedidos agora.";
+  const semSessao = erro instanceof PainelErro && erro.tipo === "sessao";
+  return (
+    <Aviso tonalidade="atencao" titulo="Lista indisponível no momento">
+      {mensagem}{" "}
+      {semSessao ? (
+        <Link href="/admin/login" className="font-medium text-gold-ink hover:underline">
+          Entrar de novo
+        </Link>
+      ) : (
+        "Recarregue a página em alguns instantes."
+      )}
+    </Aviso>
+  );
+}
+
+function EsqueletoPedidos() {
+  return (
+    <div aria-hidden="true" className="animate-pulse">
+      <div className="my-6 flex gap-2">
+        <div className="h-11 w-20 rounded-full bg-champagne" />
+        <div className="h-11 w-28 rounded-full bg-champagne" />
+        <div className="h-11 w-24 rounded-full bg-champagne" />
+        <div className="h-11 w-28 rounded-full bg-champagne" />
+      </div>
+      <div className="h-72 rounded-2xl bg-champagne" />
+    </div>
   );
 }

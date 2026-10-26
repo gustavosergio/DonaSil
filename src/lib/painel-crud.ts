@@ -444,3 +444,213 @@ export const obterProdutoPainel = cache(
     return paraCompletoPainel(linhas[0]);
   },
 );
+
+// ------------------------------------------------------------
+// Pedidos — leitura administrativa (somente leitura)
+// ------------------------------------------------------------
+// Quem libera é a política leitura_admin_pedidos (SELECT para
+// authenticated, USING existe_admin — politicas-rls.sql:156-166).
+// Não existe grant nem política de ESCRITA para pedidos: esta
+// camada não tem como alterar pedido nenhum, mesmo sem querer.
+
+/** Status previstos no banco (schema.sql: CHECK em pedidos.status).
+ *  Fonte única — a página /admin/pedidos deriva os filtros daqui. */
+export const STATUS_PEDIDO = [
+  "pendente",
+  "confirmada",
+  "enviada",
+  "entregue",
+  "cancelada",
+  "expirada",
+] as const;
+
+export type StatusPedido = (typeof STATUS_PEDIDO)[number];
+
+// Linha da LISTA do painel de pedidos. O timestamptz chega como
+// string ISO do PostgREST; a conversão para Date acontece no
+// mapeamento (à prova de variações de formato).
+const pedidoListaSchema = z.object({
+  id: z.uuid(),
+  codigo: z.string().min(1),
+  criado_em: z.string().min(1),
+  nome_cliente: z.string().min(1),
+  total: z.number().nonnegative(),
+  status: z.enum(STATUS_PEDIDO),
+});
+
+// Item congelado na hora da compra (itens_pedido — foto real de
+// nome, tamanho, cor e preço; nada é relido do catálogo).
+const itemPedidoSchema = z.object({
+  id: z.uuid(),
+  produto_nome: z.string().min(1),
+  variacao_tamanho: z.string().min(1),
+  variacao_cor: z.string().min(1),
+  quantidade: z.number().int().positive(),
+  preco_unitario: z.number().nonnegative(),
+});
+
+// Pedido completo com os itens embutidos pela FK
+// itens_pedido.pedido_id → pedidos.id (relação conferida por
+// sonda: PostgREST resolve o embed e o bloqueio é só de permissão).
+const pedidoDetalheSchema = z.object({
+  id: z.uuid(),
+  codigo: z.string().min(1),
+  criado_em: z.string().min(1),
+  status: z.enum(STATUS_PEDIDO),
+  nome_cliente: z.string().min(1),
+  whatsapp: z.string().min(1),
+  cep: z.string(),
+  endereco: z.string(),
+  complemento: z.string(),
+  bairro: z.string(),
+  cidade: z.string(),
+  uf: z.string(),
+  frete_nome: z.string().min(1),
+  frete_valor: z.number().nonnegative(),
+  subtotal: z.number().nonnegative(),
+  total: z.number().nonnegative(),
+  itens_pedido: z.array(itemPedidoSchema),
+});
+
+type PedidoListaLinha = z.infer<typeof pedidoListaSchema>;
+type PedidoDetalheLinha = z.infer<typeof pedidoDetalheSchema>;
+
+/** Pedido na lista do painel: número, data, cliente, valor, status. */
+export type PedidoResumoPainel = {
+  id: string;
+  codigo: string;
+  criadoEm: Date;
+  nomeCliente: string;
+  total: number;
+  status: StatusPedido;
+};
+
+/** Item do pedido como exibido no painel. */
+export type ItemPedidoPainel = {
+  id: string;
+  produtoNome: string;
+  tamanho: string;
+  cor: string;
+  quantidade: number;
+  precoUnitario: number;
+};
+
+/** Pedido completo para a página de detalhes do painel. */
+export type PedidoDetalhePainel = PedidoResumoPainel & {
+  whatsapp: string;
+  cep: string;
+  endereco: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  freteNome: string;
+  freteValor: number;
+  subtotal: number;
+  itens: ItemPedidoPainel[];
+};
+
+function paraResumoPedido(
+  linha: PedidoListaLinha | PedidoDetalheLinha,
+): PedidoResumoPainel {
+  return {
+    id: linha.id,
+    codigo: linha.codigo,
+    criadoEm: new Date(linha.criado_em),
+    nomeCliente: linha.nome_cliente,
+    total: linha.total,
+    status: linha.status,
+  };
+}
+
+function paraDetalhePedido(linha: PedidoDetalheLinha): PedidoDetalhePainel {
+  return {
+    ...paraResumoPedido(linha),
+    whatsapp: linha.whatsapp,
+    cep: linha.cep,
+    endereco: linha.endereco,
+    complemento: linha.complemento,
+    bairro: linha.bairro,
+    cidade: linha.cidade,
+    uf: linha.uf,
+    freteNome: linha.frete_nome,
+    freteValor: linha.frete_valor,
+    subtotal: linha.subtotal,
+    // O PostgREST não ordena embeds — a ordenação é aqui, depois
+    // da validação (mesma prática de produto_fotos acima).
+    itens: [...linha.itens_pedido]
+      .sort((a, b) => a.produto_nome.localeCompare(b.produto_nome, "pt-BR"))
+      .map((item) => ({
+        id: item.id,
+        produtoNome: item.produto_nome,
+        tamanho: item.variacao_tamanho,
+        cor: item.variacao_cor,
+        quantidade: item.quantidade,
+        precoUnitario: item.preco_unitario,
+      })),
+  };
+}
+
+const SELECT_PEDIDO_LISTA = "id,codigo,criado_em,nome_cliente,total,status";
+
+const SELECT_PEDIDO_DETALHE =
+  "id,codigo,criado_em,status,nome_cliente,whatsapp,cep,endereco,complemento,bairro,cidade,uf,frete_nome,frete_valor,subtotal,total,itens_pedido(id,produto_nome,variacao_tamanho,variacao_cor,quantidade,preco_unitario)";
+
+/**
+ * Pedidos do banco para a lista do painel — SOMENTE leitura, com
+ * o token httpOnly da sessão. A filtragem por status roda no
+ * banco (índice idx_pedidos_status) e só aceita os valores
+ * previstos em STATUS_PEDIDO — qualquer outro valor cai em
+ * "todos" (a URL é da cliente, nunca é filtro de confiança).
+ * Erros lançam PainelErro — nunca viram lista vazia.
+ */
+export async function listarPedidosPainel(
+  filtros: { status?: string } = {},
+): Promise<PedidoResumoPainel[]> {
+  const params = new URLSearchParams({
+    select: SELECT_PEDIDO_LISTA,
+    order: "criado_em.desc",
+  });
+
+  const status = filtros.status?.trim();
+  if (status && (STATUS_PEDIDO as readonly string[]).includes(status)) {
+    params.set("status", `eq.${status}`);
+  }
+
+  const linhas = await consultarPainel(
+    "pedidos",
+    params,
+    z.array(pedidoListaSchema),
+  );
+  return linhas.map(paraResumoPedido);
+}
+
+/**
+ * Pedido pelo id (uuid) para a página de DETALHE do painel, com
+ * os itens congelados na compra embutidos. Retorna `null` quando
+ * o id não é um uuid válido ou o pedido não existe; falhas lançam
+ * PainelErro — nunca confundidas com pedido inexistente.
+ *
+ * Envolta em React `cache`: consultas repetidas dentro da mesma
+ * requisição executam uma vez só.
+ */
+export const obterPedidoPainel = cache(
+  async (id: string): Promise<PedidoDetalhePainel | null> => {
+    // Id fora do formato: nem consulta o banco — 404 limpo.
+    const uuid = z.uuid().safeParse(id);
+    if (!uuid.success) return null;
+
+    const params = new URLSearchParams({
+      select: SELECT_PEDIDO_DETALHE,
+      id: `eq.${id}`,
+      limit: "1",
+    });
+    const linhas = await consultarPainel(
+      "pedidos",
+      params,
+      z.array(pedidoDetalheSchema),
+    );
+    if (linhas.length === 0) return null;
+    return paraDetalhePedido(linhas[0]);
+  },
+);
