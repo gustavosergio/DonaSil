@@ -10,6 +10,24 @@ test.afterEach(async ({ page }) => {
   expect(errosDePagina.get(page), 'Erros JavaScript não tratados no navegador').toEqual([]);
 });
 
+test("painel mostra aviso quando o catálogo fica indisponível", async ({ page, request }) => {
+  await page.goto('/admin/login');
+  await page.getByLabel('E-mail', { exact: true }).fill('admin@example.invalid');
+  await page.getByLabel('Senha', { exact: true }).fill('senha-ficticia-e2e');
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  try {
+    const falha = await request.post('http://127.0.0.1:4010/__test__/catalogo', { data: { falhar: true } });
+    expect(falha.status()).toBe(200);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Olá! Este é o painel da Dona Sil.' })).toBeVisible();
+    await expect(page.getByText('Não foi possível carregar os indicadores', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Produtos ativos/ })).toHaveCount(0);
+  } finally {
+    await request.post('http://127.0.0.1:4010/__test__/catalogo', { data: { falhar: false } });
+  }
+});
+
 async function adicionarPeca(page: Page) {
   await page.goto("/catalogo/vestido-floral");
   await page.getByRole("radio", { name: "P", exact: true }).check();

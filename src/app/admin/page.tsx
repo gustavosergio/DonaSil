@@ -9,6 +9,7 @@
 
 import Link from "next/link";
 import { Suspense } from "react";
+import { io } from "next/cache";
 import { Indicador } from "@/components/admin/Indicador";
 import { Aviso } from "@/components/admin/Aviso";
 import { TituloSecao } from "@/components/admin/TituloSecao";
@@ -19,7 +20,7 @@ import {
   IconeSacola,
   IconeTag,
 } from "@/components/admin/Icones";
-import { listarCategorias, listarProdutos } from "@/lib/catalogo";
+import { CatalogoErro, listarCategorias, listarProdutos } from "@/lib/catalogo";
 import { MODO_DEMO } from "@/lib/site";
 
 export default function PaginaVisaoGeral() {
@@ -53,10 +54,28 @@ export default function PaginaVisaoGeral() {
 // ------------------------------------------------------------
 
 async function IndicadoresReais() {
-  const [produtos, categorias] = await Promise.all([
-    listarProdutos(),
-    listarCategorias(),
-  ]);
+  // Indicadores dependem do catálogo de cada requisição, não do ambiente
+  // disponível durante a compilação (que pode não ter credenciais).
+  await io();
+  let produtos: Awaited<ReturnType<typeof listarProdutos>>;
+  let categorias: Awaited<ReturnType<typeof listarCategorias>>;
+  try {
+    [produtos, categorias] = await Promise.all([
+      listarProdutos(),
+      listarCategorias(),
+    ]);
+  } catch (erro) {
+    // Configuração ausente e indisponibilidade do catálogo não devem
+    // derrubar o painel nem ser apresentadas como contadores zerados.
+    // Erros internos do Next continuam propagando normalmente.
+    if (!(erro instanceof CatalogoErro)) throw erro;
+    return (
+      <Aviso tonalidade="atencao" titulo="Não foi possível carregar os indicadores">
+        {erro.message} Recarregue a página depois de verificar a configuração
+        ou a conexão do catálogo.
+      </Aviso>
+    );
+  }
 
   return (
     <div className="grid gap-4 sm:grid-cols-3">

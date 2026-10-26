@@ -12,6 +12,7 @@ const produto = {
 const demo = { ...produto, id: id(4), slug: 'peca-demonstracao', nome: 'Peça de demonstração', demo: true };
 const nomes = ['Recife — Zona Norte', 'Recife — Zona Sul', 'Região Metropolitana do Recife', 'Interior de Pernambuco', 'Outros estados', 'Retirada no local — endereço combinado pelo WhatsApp'];
 const fretes = nomes.map((nome, i) => ({ id: id(10+i), nome, valor: [9.99,19.99,29.99,29.99,34.99,0][i], ativo: true, ordem: i+1 }));
+let falhaCatalogo = false;
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1:4010');
@@ -19,6 +20,15 @@ http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const responder = (dados, status=200) => { res.statusCode=status; res.end(JSON.stringify(dados)); };
   if (url.pathname === '/') return responder({ teste: true });
+  if (url.pathname === '/__test__/catalogo' && req.method === 'POST') {
+    let corpo = '';
+    for await (const parte of req) corpo += parte;
+    falhaCatalogo = JSON.parse(corpo).falhar === true;
+    return responder({ ok: true });
+  }
+  if (falhaCatalogo && ['/rest/v1/produtos', '/rest/v1/categorias'].includes(url.pathname)) {
+    return responder({ erro: 'Indisponibilidade simulada no teste' }, 503);
+  }
   if (url.pathname === '/rest/v1/rpc/existe_admin') return responder(req.headers.authorization === 'Bearer token-admin-ficticio');
   // Login falso exclusivo do servidor de testes. Não aceita nenhum dado real.
   if (url.pathname === '/auth/v1/token') {
