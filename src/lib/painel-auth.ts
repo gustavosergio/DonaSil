@@ -116,6 +116,7 @@ async function pedirToken(
 
   if (!resposta.ok) {
     if (resposta.status === 429) return { resultado: "limite" };
+    if (resposta.status >= 500) return { resultado: "conexao" };
     // O Supabase sinaliza e-mail pendente de confirmação no corpo
     // (error_code / msg). Qualquer outra recusa 4xx = credenciais.
     try {

@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import { CarrinhoProvider } from "@/components/CarrinhoProvider";
 import MostrarForaDoPainel from "@/components/MostrarForaDoPainel";
+import { MODO_DEMO } from "@/lib/site";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -27,7 +28,8 @@ export const metadata: Metadata = {
     template: "%s — Dona Sil",
   },
   description:
-    "Loja de moda feminina Dona Sil. Nova loja virtual em preparação — catálogo online em breve.",
+    "Moda feminina escolhida com carinho. Explore as peças da Dona Sil, monte sua sacola e combine pagamento e entrega pelo WhatsApp.",
+  robots: MODO_DEMO ? { index: false, follow: false } : undefined,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

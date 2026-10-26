@@ -32,6 +32,7 @@ import { Aviso } from "@/components/admin/Aviso";
 import { BotaoLink } from "@/components/admin/Botao";
 import { FormularioProduto } from "@/components/admin/FormularioProduto";
 import { FotosProduto } from "@/components/admin/FotosProduto";
+import { AjustarEstoque } from "@/components/admin/AjustarEstoque";
 import { IconeOlho } from "@/components/admin/Icones";
 import { RotuloStatus } from "@/components/admin/RotuloStatus";
 import { Tabela, Td, Th } from "@/components/admin/Tabela";
@@ -185,7 +186,10 @@ async function ConteudoProduto({ params }: PropsConteudo) {
                     style={{ backgroundColor: variacao.corHex }}
                   />
                 </Td>
-                <Td className="text-right">{variacao.quantidade}</Td>
+                <Td className="text-right">
+                  <AjustarEstoque key={`${variacao.id}-${variacao.quantidade}`} id={variacao.id}
+                    quantidade={variacao.quantidade} rotulo={`${variacao.tamanho} — ${variacao.cor}`} />
+                </Td>
               </tr>
             ))}
           </tbody>

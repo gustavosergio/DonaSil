@@ -1,3 +1,4 @@
+
 -- ============================================================
 -- DONA SIL — ETAPA 3 (G4-B) — FUNÇÕES DE ESTOQUE E PEDIDO
 -- ============================================================
@@ -47,8 +48,8 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_limite_item     int := 10;   -- máximo de unidades por item (variacao)
-  v_limite_carrinho int := 20;  -- máximo de linhas no carrinho
+  v_limite_item     int := 10;
+  v_limite_carrinho int := 20;
   v_id              uuid;
   v_codigo          text;
   v_subtotal        numeric(10,2) := 0;
@@ -61,82 +62,85 @@ declare
   v_ruins           int;
   v_tentativa       int := 0;
 begin
-  -- 0) SERIALIZA chamadas simultâneas com a MESMA chave:
-  --    a segunda espera a primeira terminar e recebe o pedido
-  --    já criado (em vez de falhar). A trava é liberada sozinha
-  --    no fim da transação.
+  -- 0) SERIALIZA chamadas simultâneas com a MESMA chave.
   perform pg_advisory_xact_lock(
     hashtext('criar_pedido:' || p_chave_idempotencia::text)
   );
 
-  -- 1) Compras desativadas (site em demo) => recusa.
-  --    Bloqueio no SERVIDOR: impossível contornar pelo navegador.
-  --    A tabela guarda o VALOR DIRETO em jsonb ('true'/'false'),
-  --    por isso extraimos com #>> '{}' (texto da raiz).
+  -- 1) Compras desativadas => recusa.
   select coalesce((valor #>> '{}')::boolean, false)
     into v_compras
     from public.configuracoes
     where chave = 'compras_ativas';
+
   if v_compras is distinct from true then
     raise exception 'COMPRAS_DESATIVADAS: site em modo demonstração';
   end if;
 
-  -- 2) Idempotência: mesma chave => devolve o MESMO pedido,
-  --    sem debitar estoque de novo. (A chamada simultânea
-  --    também cai aqui, depois de esperar a trava do passo 0.)
+  -- 2) Idempotência.
   select id, codigo into v_id, v_codigo
     from public.pedidos
     where chave_idempotencia = p_chave_idempotencia;
+
   if v_id is not null then
-    return jsonb_build_object('id', v_id, 'codigo', v_codigo, 'ja_existia', true);
+    return jsonb_build_object(
+      'id', v_id,
+      'codigo', v_codigo,
+      'ja_existia', true
+    );
   end if;
 
-  -- 3) Validação dos dados da cliente -------------------------
+  -- 3) Validação dos dados da cliente.
   if coalesce(p_dados->>'nome', '') = ''
      or char_length(p_dados->>'nome') > 200 then
     raise exception 'DADOS_INVALIDOS: nome obrigatório (até 200 letras)';
   end if;
+
   if coalesce(p_dados->>'whatsapp', '') = ''
      or char_length(p_dados->>'whatsapp') > 30 then
     raise exception 'DADOS_INVALIDOS: whatsapp obrigatório (até 30 dígitos)';
   end if;
+
   if coalesce(p_dados->>'cep', '') = ''
      or char_length(p_dados->>'cep') > 20 then
     raise exception 'DADOS_INVALIDOS: cep obrigatório';
   end if;
+
   if coalesce(p_dados->>'endereco', '') = ''
      or char_length(p_dados->>'endereco') > 300 then
     raise exception 'DADOS_INVALIDOS: endereco obrigatório (até 300 letras)';
   end if;
+
   if coalesce(p_dados->>'cidade', '') = ''
      or char_length(p_dados->>'cidade') > 120 then
     raise exception 'DADOS_INVALIDOS: cidade obrigatória';
   end if;
+
   if coalesce(upper(trim(p_dados->>'uf')), '') !~ '^[A-Z]{2}$' then
     raise exception 'DADOS_INVALIDOS: uf deve ter 2 letras (ex.: PE)';
   end if;
+
   if char_length(coalesce(p_dados->>'complemento', '')) > 200
      or char_length(coalesce(p_dados->>'bairro', '')) > 120 then
     raise exception 'DADOS_INVALIDOS: complemento/bairro muito longo';
   end if;
 
-  -- 4) Validação da estrutura do carrinho ---------------------
+  -- 4) Validação da estrutura do carrinho.
   if jsonb_typeof(p_dados->'itens') is distinct from 'array' then
     raise exception 'DADOS_INVALIDOS: itens do carrinho ausentes';
   end if;
+
   select count(*) into v_total_itens
     from jsonb_array_elements(p_dados->'itens');
+
   if v_total_itens = 0 then
     raise exception 'DADOS_INVALIDOS: carrinho vazio';
   end if;
+
   if v_total_itens > v_limite_carrinho then
     raise exception 'DADOS_INVALIDOS: máximo % itens por pedido', v_limite_carrinho;
   end if;
 
-  -- Cada item: objeto com variacao_id (uuid válido) e
-  -- quantidade (número inteiro de 1 até o limite).
-  -- CASE garante ordem de avaliação: só converte em número
-  -- depois que o texto passar no teste de formato.
   select count(*) into v_ruins
     from jsonb_array_elements(p_dados->'itens') e
     where jsonb_typeof(e.value) is distinct from 'object'
@@ -152,14 +156,12 @@ begin
                then (e.value->>'quantidade')::int
              else v_limite_item + 1
            end) > v_limite_item;
+
   if v_ruins > 0 then
     raise exception 'DADOS_INVALIDOS: item malformado ou quantidade acima de %', v_limite_item;
   end if;
 
-  -- 4b) Limite também na SOMA das linhas repetidas:
-  --      duas linhas de 10+10 da mesma variação = 20 => recusado,
-  --      mesmo que cada linha passe no limite individual.
-  --      Roda ANTES do frete, do catálogo e de qualquer débito.
+  -- 4b) Limite na soma de linhas repetidas da mesma variação.
   select count(*) into v_ruins
     from (
       select (e.value->>'variacao_id')::uuid as variacao_id,
@@ -168,50 +170,45 @@ begin
       group by 1
     ) i
     where i.qtd > v_limite_item;
+
   if v_ruins > 0 then
     raise exception 'DADOS_INVALIDOS: soma das linhas do mesmo item passa de % unidades', v_limite_item;
   end if;
 
-  -- 5) Frete: obrigatório. ID validado antes de converter, valor
-  --    SEMPRE lido do banco (nunca do navegador).
+  -- 5) Frete: valor sempre lido do banco.
   if p_dados->>'faixa_frete_id' is null
      or p_dados->>'faixa_frete_id' !~*
         '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
     raise exception 'DADOS_INVALIDOS: faixa_frete_id ausente ou inválido';
   end if;
+
   select nome, valor into v_frete_nome, v_frete_valor
     from public.faixas_frete
     where id = (p_dados->>'faixa_frete_id')::uuid
       and ativo = true;
+
   if v_frete_nome is null then
     raise exception 'FRETE_INVALIDO: região de entrega não disponível';
   end if;
 
-  -- 6) Validação de catálogo ANTES de debitar:
-  --    toda variação existe, produto ativo, produto NÃO demo.
+  -- 6) Validação do catálogo antes de debitar.
   select count(*) into v_ruins
     from (
       select (e.value->>'variacao_id')::uuid as variacao_id
       from jsonb_array_elements(p_dados->'itens') e
     ) i
     left join public.variacoes v on v.id = i.variacao_id
-    left join public.produtos  p on p.id = v.produto_id
+    left join public.produtos p on p.id = v.produto_id
     where v.id is null
        or p.id is null
        or p.ativo = false
        or p.demo = true;
+
   if v_ruins > 0 then
     raise exception 'PRODUTO_INDISPONIVEL: item inexistente, inativo ou de demonstração';
   end if;
 
-  -- 7) DÉBITO ATÔMICO por variação.
-  --    * Itens repetidos no carrinho são UNIFICADOS (somados)
-  --      antes de debitar — evita débito duplo na mesma variação.
-  --    * ORDER BY fixo evita deadlock entre compras simultâneas.
-  --    * "quantidade >= pedido" => impossível ficar negativo.
-  --    * A condição extra no UPDATE repete a regra
-  --      ativo/não-demo: vale mesmo se alguém desativar o produto
-  --      no exato instante da compra.
+  -- 7) Débito atômico por variação.
   for v_item in
     select (e.value->>'variacao_id')::uuid as variacao_id,
            sum((e.value->>'quantidade')::int) as qtd
@@ -224,18 +221,21 @@ begin
       where v.id = v_item.variacao_id
         and v.quantidade >= v_item.qtd
         and exists (
-          select 1 from public.produtos p
+          select 1
+          from public.produtos p
           where p.id = v.produto_id
             and p.ativo = true
             and p.demo = false
         );
+
     get diagnostics v_linhas = row_count;
+
     if v_linhas = 0 then
       raise exception 'ESTOQUE_INSUFICIENTE: variacao % esgotada', v_item.variacao_id;
     end if;
   end loop;
 
-  -- 8) Subtotal calculado no banco (preço de tabela).
+  -- 8) Subtotal calculado no banco.
   select coalesce(sum(p.preco * i.qtd), 0)
     into v_subtotal
     from (
@@ -245,14 +245,18 @@ begin
       group by 1
     ) i
     join public.variacoes v on v.id = i.variacao_id
-    join public.produtos  p on p.id = v.produto_id;
+    join public.produtos p on p.id = v.produto_id;
 
-  -- 9) Código curto único (DS-XXXXXX). Em caso raríssimo de
-  --    colisão, tenta outro. Se a colisão for da CHAVE de
-  --    idempotência (corrida vencida), devolve o pedido existente.
+  -- Frete grátis somente quando o subtotal for maior que R$ 129,99.
+  if v_subtotal > 129.99 then
+    v_frete_valor := 0;
+  end if;
+
+  -- 9) Código curto único (DS-XXXXXX).
   loop
     v_tentativa := v_tentativa + 1;
     v_codigo := 'DS-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
+
     begin
       insert into public.pedidos (
         codigo, chave_idempotencia,
@@ -267,23 +271,25 @@ begin
         v_frete_nome, v_frete_valor, v_subtotal, v_subtotal + v_frete_valor
       )
       returning id into v_id;
+
       exit;
+
     exception when unique_violation then
-      -- Perdeu corrida para a MESMA chave? Devolve o pedido vencedor.
       select id, codigo into v_id, v_codigo
         from public.pedidos
         where chave_idempotencia = p_chave_idempotencia;
+
       if v_id is not null then
         return jsonb_build_object('id', v_id, 'codigo', v_codigo, 'ja_existia', true);
       end if;
-      -- Colisão foi só do código curto: tenta de novo (até 5x).
+
       if v_tentativa >= 5 then
         raise;
       end if;
     end;
   end loop;
 
-  -- 10) Itens congelados: nome, tamanho, cor e preço da HORA da compra.
+  -- 10) Itens congelados: nome, tamanho, cor e preço da hora da compra.
   insert into public.itens_pedido (
     pedido_id, variacao_id, produto_nome, variacao_tamanho, variacao_cor,
     quantidade, preco_unitario
@@ -298,7 +304,7 @@ begin
     group by 1
   ) i
   join public.variacoes v on v.id = i.variacao_id
-  join public.produtos  p on p.id = v.produto_id;
+  join public.produtos p on p.id = v.produto_id;
 
   return jsonb_build_object('id', v_id, 'codigo', v_codigo);
 end;
@@ -306,13 +312,7 @@ $$;
 
 -- ------------------------------------------------------------
 -- CANCELAR PEDIDO (somente pendente ou confirmada)
--- Devolve estoque UMA única vez (trava estoque_devolvido).
--- Repetir a chamada = efeito zero (idempotente).
--- enviada/entregue => erro: reposição é manual, no admin.
---
--- Devolução SOMA as quantidades POR VARIAÇÃO antes de creditar:
--- se o pedido tiver 2 linhas da mesma variação, devolve a soma
--- (SUM + GROUP BY), não uma linha qualquer.
+-- Devolve estoque uma única vez (trava estoque_devolvido).
 -- ------------------------------------------------------------
 create or replace function public.cancelar_pedido(p_pedido_id uuid)
 returns text
@@ -321,21 +321,24 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_status     text;
-  v_devolvido  boolean;
+  v_status text;
+  v_devolvido boolean;
 begin
-  perform 1 from public.pedidos
+  perform 1
+    from public.pedidos
     where id = p_pedido_id
-    for update;                          -- trava o pedido contra corrida
+    for update;
+
   if not found then
     raise exception 'PEDIDO_INEXISTENTE';
   end if;
 
   select status, estoque_devolvido into v_status, v_devolvido
-    from public.pedidos where id = p_pedido_id;
+    from public.pedidos
+    where id = p_pedido_id;
 
   if v_status in ('cancelada', 'expirada') then
-    return 'JA_PROCESSADO';              -- idempotente: nada repete
+    return 'JA_PROCESSADO';
   end if;
 
   if v_status not in ('pendente', 'confirmada') then
@@ -343,8 +346,6 @@ begin
   end if;
 
   if v_devolvido = false then
-    -- SOMA por variação antes de devolver (defesa contra
-    -- linhas repetidas de mesma variação no pedido).
     update public.variacoes v
       set quantidade = v.quantidade + r.total
     from (
@@ -369,12 +370,7 @@ end;
 $$;
 
 -- ------------------------------------------------------------
--- EXPIRAR PENDENTES (executada pelo cron diário e pelo admin)
--- Pendentes com mais de 48h: devolve estoque e marca 'expirada'.
--- Idempotente: só pega status='pendente'; reexecutar não devolve 2x
--- (pedido expirado/cancelado sai do filtro). Tudo numa transação.
---
--- Devolução também SOMA por variação (GROUP BY) antes de creditar.
+-- EXPIRAR PENDENTES
 -- ------------------------------------------------------------
 create or replace function public.expirar_pedidos_pendentes(p_horas int default 48)
 returns int
@@ -386,7 +382,8 @@ declare
   v_total int := 0;
 begin
   with alvos as (
-    select id from public.pedidos
+    select id
+    from public.pedidos
     where status = 'pendente'
       and criado_em < now() - make_interval(hours => p_horas)
     for update
@@ -416,16 +413,6 @@ $$;
 
 -- ------------------------------------------------------------
 -- PERMISSÕES DE EXECUÇÃO
---
--- anon (visitante) e authenticated (cliente logada comum):
---   NENHUMA destas funções. Nem descobrir que elas existem, pelo
---   lado público da API.
--- service_role (servidor do site, com a chave secreta):
---   pode executar as três. É o único caminho para criar,
---   cancelar ou expirar pedido.
--- existe_admin: precisa ser executável por authenticated
---   (as políticas RLS a chamam); só devolve true/false,
---   não expõe nada. anon não precisa.
 -- ------------------------------------------------------------
 revoke execute on function public.criar_pedido(jsonb, uuid) from public, anon, authenticated;
 revoke execute on function public.cancelar_pedido(uuid) from public, anon, authenticated;

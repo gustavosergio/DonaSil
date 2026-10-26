@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatarBRL } from "@/lib/format";
 import type { ProdutoResumo } from "@/lib/catalogo";
+import { MODO_DEMO } from "@/lib/site";
 
 /**
  * Cartão de produto do catálogo real.
@@ -40,7 +41,7 @@ export default function ProductCard({ produto }: { produto: ProdutoResumo }) {
           <>
             <div className="absolute inset-0 bg-gradient-to-br from-gold-soft/50 via-champagne to-sand transition-transform duration-300 group-hover:scale-[1.02]" />
             <div className="absolute bottom-3 left-3 rounded-full bg-white/85 px-3 py-1 text-xs text-ink-soft dark:bg-ivory">
-              Foto demonstrativa
+              {MODO_DEMO ? "Foto demonstrativa" : "Foto em breve"}
             </div>
           </>
         )}

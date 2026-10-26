@@ -27,7 +27,7 @@ export default function PaginaVisaoGeral() {
     <>
       <TituloSecao
         titulo="Olá! Este é o painel da Dona Sil."
-        descricao="Aqui você vai cuidar do catálogo, das categorias, das cores e dos pedidos da loja. O painel está tomando forma: as páginas estão prontas, a entrada já exige a sua conta de administradora, e o cadastro de peças novas já grava no banco. A edição e as demais gravações chegam nas próximas etapas."
+        descricao="Cadastre peças, edite os dados, envie fotos e ajuste o estoque em Produtos. As vendas desta versão são concluídas pelo atendimento no WhatsApp."
       />
 
       {MODO_DEMO && (
@@ -63,7 +63,7 @@ async function IndicadoresReais() {
       <Indicador
         valor={produtos.length}
         rotulo="Produtos ativos"
-        nota="Peças visíveis na loja (demonstração incluída)."
+        nota={MODO_DEMO ? "Peças visíveis na loja (demonstração incluída)." : "Peças reais visíveis na loja."}
         href="/admin/produtos"
       />
       <Indicador

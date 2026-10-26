@@ -57,6 +57,7 @@ export default function FinalizarPedido({ faixas }: Props) {
   // Depois de conferir, a cliente pode voltar e editar os dados
   // (o resumo fica escondido até enviar de novo).
   const [editando, setEditando] = useState(false);
+  const [faixaSelecionada, setFaixaSelecionada] = useState(faixas[0]?.id ?? "");
 
   if (!carregado) {
     return (
@@ -251,14 +252,14 @@ export default function FinalizarPedido({ faixas }: Props) {
         </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
-          <a
+          {!sacolaMudou && <a
             href={urlWhatsApp}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-full bg-gold px-6 py-3 text-sm font-semibold text-ink transition hover:bg-gold-deep dark:text-[#2b2420]"
           >
             Enviar pedido no WhatsApp
-          </a>
+          </a>}
           <button
             type="button"
             onClick={() => setEditando(true)}
@@ -289,7 +290,7 @@ export default function FinalizarPedido({ faixas }: Props) {
   );
 
   return (
-    <form action={submeter} className="mt-8 space-y-8">
+    <form action={submeter} onReset={(evento) => evento.preventDefault()} className="mt-8 space-y-8">
       {/* Problemas de sacola/estoque/rede (Server Action) */}
       {problemas.length > 0 && (
         <div
@@ -341,10 +342,8 @@ export default function FinalizarPedido({ faixas }: Props) {
           ))}
         </ul>
         <p className="mt-4 text-xs leading-6 text-ink-soft">
-          Estes valores são da sua sacola, só no navegador. Quando
-          você enviar, o servidor confere preço e estoque de novo
-          com o catálogo oficial — o resumo final usa os valores
-          reais de agora.
+          Os preços e a disponibilidade das peças serão conferidos
+          novamente antes de você enviar ao atendimento.
         </p>
       </section>
 
@@ -371,7 +370,7 @@ export default function FinalizarPedido({ faixas }: Props) {
             Região de entrega
           </legend>
           <div className="mt-3 space-y-2">
-            {faixas.map((faixa, indice) => {
+            {faixas.map((faixa) => {
               const id = `faixa-${faixa.id}`;
               return (
                 <label
@@ -386,11 +385,8 @@ export default function FinalizarPedido({ faixas }: Props) {
                       name="faixaFreteId"
                       value={faixa.id}
                       required
-                      defaultChecked={
-                        entregaAnterior
-                          ? entregaAnterior.faixaFreteId === faixa.id
-                          : indice === 0
-                      }
+                      checked={faixaSelecionada === faixa.id}
+                      onChange={() => setFaixaSelecionada(faixa.id)}
                       className="h-4 w-4 accent-gold"
                     />
                     {faixa.nome}
@@ -412,8 +408,7 @@ export default function FinalizarPedido({ faixas }: Props) {
           )}
           <p className="mt-3 text-xs leading-6 text-ink-soft">
             Pedidos acima de R$ 129,99 têm frete grátis para
-            entregas. O valor do frete é confirmado pelo servidor no
-            envio.
+            entregas. Você verá o valor final na próxima etapa.
           </p>
         </fieldset>
       </section>
@@ -508,10 +503,9 @@ function Campo({ rotulo, nome, erro, opcional, ...resto }: CampoProps) {
 //   * os campos que o CEP pode preencher (cep, cidade, endereco,
 //     bairro, uf) são CONTROLADOS — e o WhatsApp também, por causa
 //     da máscara de digitação (CEP 00000-000; telefone (81)
-//     92222-8888 — ver src/lib/mascaras.ts). Nome e Complemento
-//     seguem não controlados — nem o autopreenchimento nem a
-//     máscara os toca: número da residência e complemento são da
-//     cliente.
+//     92222-8888 — ver src/lib/mascaras.ts). Nome e complemento
+//     também são controlados para preservar os dados quando a
+//     conferência retorna um erro de entrega ou estoque.
 //
 // A consulta acontece SOMENTE com o CEP completo (8 dígitos),
 // nunca a cada tecla; respostas de consultas anteriores são
@@ -541,6 +535,8 @@ const MENSAGENS_CEP: Record<Exclude<StatusCep, "parado">, string> = {
 };
 
 function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
+  const [nome, setNome] = useState(entregaAnterior?.nome ?? "");
+  const [complemento, setComplemento] = useState(entregaAnterior?.complemento ?? "");
   // Campos que o CEP preenche — controlados; o valor inicial é o
   // da última conferência confirmada (entregaAnterior), já com a
   // máscara aplicada (valor antigo pode vir sem formatação).
@@ -665,12 +661,12 @@ function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
     // cacheia os CEPs já resolvidos: redigitar o mesmo não
     // refaz a chamada à rede.
     const normalizado = normalizarCep(valor);
+    const ordem = ++ordemConsulta.current;
     if (!normalizado) {
       setStatusCep("parado");
       return;
     }
 
-    const ordem = ++ordemConsulta.current;
     setStatusCep("buscando");
     const resultado = await consultarCep(normalizado);
 
@@ -716,7 +712,8 @@ function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
           required
           maxLength={200}
           autoComplete="name"
-          defaultValue={entregaAnterior?.nome}
+          value={nome}
+          onChange={evento => setNome(evento.target.value)}
         />
         <Campo
           rotulo="WhatsApp (com DDD)"
@@ -800,7 +797,8 @@ function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
             maxLength={200}
             placeholder="Apto, bloco, referência…"
             autoComplete="address-line2"
-            defaultValue={entregaAnterior?.complemento}
+            value={complemento}
+            onChange={evento => setComplemento(evento.target.value)}
           />
           <Campo
             rotulo="Bairro"

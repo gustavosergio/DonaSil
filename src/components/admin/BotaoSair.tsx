@@ -11,7 +11,6 @@
 // ============================================================
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Botao } from "./Botao";
 
 export default function BotaoSair({
@@ -19,7 +18,6 @@ export default function BotaoSair({
 }: {
   tamanho?: "normal" | "compacto";
 }) {
-  const router = useRouter();
   const [saindo, setSaindo] = useState(false);
 
   async function sair() {
@@ -33,7 +31,8 @@ export default function BotaoSair({
     }
     // O portão (proxy) exige sessão no próximo acesso: sem
     // cookies, qualquer página do painel volta para o login.
-    router.push("/admin/login");
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- A troca de sessão deve descartar o cache de navegação autenticado.
+    window.location.assign("/admin/login");
   }
 
   return (

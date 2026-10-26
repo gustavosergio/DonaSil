@@ -3,8 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test": "node tests/regras.cjs && node tests/catalogo.cjs && node tests/estoque.cjs && node tests/painel-auth.cjs && node tests/produtos.cjs",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report",
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
+    "build:turbopack": "next build",
+    "build:webpack": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },
@@ -15,6 +20,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

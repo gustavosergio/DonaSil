@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { formatarBRL } from "@/lib/format";
 import { CatalogoErro, obterProduto, type ProdutoCompleto } from "@/lib/catalogo";
 import AdicionarASacola from "@/components/AdicionarASacola";
+import { MODO_DEMO } from "@/lib/site";
 
 type Props = PageProps<"/catalogo/[slug]">;
 
@@ -98,7 +99,7 @@ async function DetalheProduto({ params }: Pick<Props, "params">) {
           <>
             <div className="absolute inset-0 bg-gradient-to-br from-gold-soft/50 via-champagne to-sand" />
             <div className="absolute bottom-3 left-3 rounded-full bg-white/85 px-3 py-1 text-xs text-ink-soft">
-              Foto demonstrativa
+              {MODO_DEMO ? "Foto demonstrativa" : "Foto em breve"}
             </div>
           </>
         )}

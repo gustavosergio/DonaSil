@@ -9,7 +9,7 @@ Site em construção. Primeira versão planejada para novembro de 2026.
 - **Next.js 16** (App Router) + **TypeScript** — páginas e lógica do site
 - **Tailwind CSS 4** — visual e identidade
 - **Supabase** (a partir da Etapa 3) — produtos, estoque, pedidos e fotos
-- **Cloudflare Pages** (a partir da aprovação G3) — hospedagem gratuita
+- **Hospedagem** — requer execução de servidor Next.js para cookies, Server Actions e rotas de API; não é uma exportação estática.
 
 ## Como rodar no seu computador
 
@@ -24,6 +24,10 @@ Depois abra http://localhost:3000 no navegador. Para parar, pressione
 Ctrl+C no terminal.
 
 ## Comandos principais
+
+A revisão e as pendências para abertura comercial estão em [PUBLICACAO.md](PUBLICACAO.md).
+Use `npm test` para as regras comerciais. A compilação padrão usa Webpack;
+`npm run build:turbopack` mantém a alternativa com Turbopack.
 
 | Comando | O que faz |
 | --- | --- |

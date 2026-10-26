@@ -353,7 +353,14 @@ export const dadosEntregaSchema = z.object({
     .string()
     .trim()
     .toUpperCase()
-    .regex(/^[A-Z]{2}$/, "A UF deve ter 2 letras (ex.: PE)."),
+    .refine(
+      (uf) => [
+        "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
+        "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",
+        "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+      ].includes(uf),
+      "Informe uma UF válida (ex.: PE).",
+    ),
   faixaFreteId: z.uuid("Escolha a região de entrega."),
 });
 

@@ -1,6 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Os testes de navegador compilam em pasta própria, sem substituir o build final.
+  distDir: process.env.DONASIL_DIST_DIR || ".next",
+  poweredByHeader: false,
+  async headers() {
+    return [{
+      source: "/:path*",
+      headers: [
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      ],
+    }];
+  },
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
@@ -12,14 +25,6 @@ const nextConfig: NextConfig = {
      é afetada. Se o IP do computador mudar (DHCP do roteador),
      atualize o valor aqui. */
   allowedDevOrigins: ["192.168.0.106"],
-  turbopack: {
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
-  },
 };
 
 export default nextConfig;

@@ -25,6 +25,7 @@ import {
   aplicarCookiesSessao,
   limparCookiesSessao,
   renovarSessaoPainel,
+  verificarAdminPainel,
 } from "@/lib/painel-auth";
 
 export const config = {
@@ -33,10 +34,6 @@ export const config = {
 
 function ehRotaLogin(caminho: string): boolean {
   return caminho === "/admin/login" || caminho.startsWith("/admin/login/");
-}
-
-function temValor(request: NextRequest, nome: string): boolean {
-  return (request.cookies.get(nome)?.value ?? "").length > 0;
 }
 
 /** URL do login, guardando o destino (?proximo=…) e o motivo. */
@@ -52,38 +49,34 @@ function urlLogin(request: NextRequest, motivo: "expirada" | null): URL {
 
 export async function proxy(request: NextRequest) {
   const caminho = request.nextUrl.pathname;
+  const login = ehRotaLogin(caminho);
+  const token = request.cookies.get(COOKIE_TOKEN)?.value ?? "";
+  const renovacao = request.cookies.get(COOKIE_RENOVACAO)?.value ?? "";
 
-  // Página de login: sem sessão → renderiza; com sessão → /admin.
-  if (ehRotaLogin(caminho)) {
-    if (temValor(request, COOKIE_TOKEN)) {
+  // A presença de um cookie não comprova sessão: o banco valida
+  // o token e o vínculo administrativo em cada entrada no painel.
+  if (token && await verificarAdminPainel(token) === "admin") {
+    if (login) {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
     return NextResponse.next();
   }
-
-  // Páginas do painel: sessão de acesso presente → segue.
-  if (temValor(request, COOKIE_TOKEN)) {
-    return NextResponse.next();
-  }
-
-  // Sem acesso, mas com renovação → troca por tokens novos.
-  if (temValor(request, COOKIE_RENOVACAO)) {
-    const renovacao = request.cookies.get(COOKIE_RENOVACAO)?.value ?? "";
+  if (renovacao) {
     const resultado = await renovarSessaoPainel(renovacao);
-
-    if (resultado.resultado === "ok") {
-      const resposta = NextResponse.next();
+    if (resultado.resultado === "ok" &&
+        await verificarAdminPainel(resultado.sessao.access_token) === "admin") {
+      // A página desta mesma requisição já deve ler os tokens novos.
+      request.cookies.set(COOKIE_TOKEN, resultado.sessao.access_token);
+      request.cookies.set(COOKIE_RENOVACAO, resultado.sessao.refresh_token);
+      const resposta = login
+        ? NextResponse.redirect(new URL("/admin", request.url))
+        : NextResponse.next({ request: { headers: new Headers(request.headers) } });
       aplicarCookiesSessao(resposta, resultado.sessao);
       return resposta;
     }
-
-    // Renovação recusada (token rotacionado/expirado/revogado):
-    // a sessão acabou — limpa tudo e pede novo login.
-    const resposta = NextResponse.redirect(urlLogin(request, "expirada"));
-    limparCookiesSessao(resposta);
-    return resposta;
   }
-
-  // Sem sessão nenhuma → login.
-  return NextResponse.redirect(urlLogin(request, null));
+  const resposta = login ? NextResponse.next()
+    : NextResponse.redirect(urlLogin(request, token || renovacao ? "expirada" : null));
+  if (token || renovacao) limparCookiesSessao(resposta);
+  return resposta;
 }

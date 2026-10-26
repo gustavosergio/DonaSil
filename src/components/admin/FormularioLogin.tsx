@@ -12,7 +12,6 @@
 // ============================================================
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { Aviso } from "./Aviso";
 import { Botao } from "./Botao";
 import { CampoTexto } from "./Campo";
@@ -26,7 +25,6 @@ export default function FormularioLogin({
   /** Veio do portão: sessão antiga venceu/foi revogada. */
   sessaoExpirada?: boolean;
 }) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -54,7 +52,9 @@ export default function FormularioLogin({
         // Os cookies da sessão já foram gravados na resposta. A
         // navegação abaixo pede a página ao servidor, o portão
         // (proxy) lê o cookie novo e entrega o painel já logado.
-        router.push(proximo);
+        // Nova navegação evita reutilizar redirecionamentos prefetched
+        // antes de o cookie de autenticação ter sido criado.
+        window.location.assign(proximo);
         return;
       }
 

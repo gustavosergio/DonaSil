@@ -5,14 +5,13 @@ import { linkWhatsApp } from "@/lib/whatsapp";
 import { MODO_DEMO } from "@/lib/site";
 import {
   CatalogoErro,
+  listarCategorias,
   listarDestaques,
   type ProdutoResumo,
 } from "@/lib/catalogo";
 
 const MENSAGEM_ATENDIMENTO =
   "Olá! Vim pelo site da Dona Sil e gostaria de saber mais sobre as peças.";
-
-const categorias = ["Vestidos", "Blusas", "Saias", "Acessórios"];
 
 export default function Home() {
   return (
@@ -50,20 +49,15 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Reserva de espaço das fotos reais — decoração por enquanto */}
-          <div
-            aria-hidden="true"
-            className="relative mx-auto hidden h-80 w-72 sm:block lg:h-96 lg:w-80"
-          >
-            <div className="absolute inset-0 rotate-3 rounded-3xl bg-gold-soft/40" />
-            <div className="absolute inset-0 -rotate-2 overflow-hidden rounded-3xl bg-sand">
-              <div className="flex h-full items-end p-4">
-                <span className="rounded-full bg-white/85 px-3 py-1 text-xs text-ink-soft dark:bg-ivory">
-                  Fotos demonstrativas
-                </span>
-              </div>
-            </div>
-          </div>
+          <aside className="rounded-3xl border border-sand bg-ivory p-8 sm:p-10" aria-label="Como comprar">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold-ink">Do seu jeito</p>
+            <h2 className="mt-4 font-display text-3xl font-semibold text-ink">Escolha com calma.<br />A gente cuida do resto.</h2>
+            <ol className="mt-7 space-y-5 text-sm leading-7 text-ink-soft">
+              <li><span className="font-semibold text-gold-ink">01.</span> Explore as peças e escolha seu tamanho e cor.</li>
+              <li><span className="font-semibold text-gold-ink">02.</span> Monte sua sacola e confira a entrega ou retirada.</li>
+              <li><span className="font-semibold text-gold-ink">03.</span> Envie pelo WhatsApp. Nosso atendimento confirma a disponibilidade, o pagamento e o prazo.</li>
+            </ol>
+          </aside>
         </div>
       </section>
 
@@ -72,18 +66,9 @@ export default function Home() {
         <h2 id="categorias" className="sr-only">
           Categorias
         </h2>
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {categorias.map((categoria) => (
-            <li key={categoria}>
-              <Link
-                href="/catalogo"
-                className="flex h-24 items-center justify-center rounded-2xl border border-sand bg-ivory text-sm font-medium text-ink transition hover:border-gold hover:text-gold-ink sm:h-28"
-              >
-                {categoria}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <Suspense fallback={null}>
+          <CategoriasHome />
+        </Suspense>
       </section>
 
       {/* Novidades */}
@@ -165,6 +150,27 @@ async function Novidades() {
         </li>
       ))}
     </ul>
+  );
+}
+
+async function CategoriasHome() {
+  let categorias: Awaited<ReturnType<typeof listarCategorias>>;
+  try {
+    categorias = await listarCategorias();
+  } catch {
+    return <Link href="/catalogo" className="text-sm text-gold-ink underline">Ver todas as peças</Link>;
+  }
+  return (
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {categorias.map((categoria) => (
+          <li key={categoria.slug}>
+            <Link href={`/catalogo?categoria=${encodeURIComponent(categoria.slug)}`}
+              className="flex h-24 items-center justify-center rounded-2xl border border-sand bg-ivory text-sm font-medium text-ink transition hover:border-gold hover:text-gold-ink sm:h-28">
+              {categoria.nome}
+            </Link>
+          </li>
+        ))}
+      </ul>
   );
 }
 

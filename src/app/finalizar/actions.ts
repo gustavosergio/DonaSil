@@ -219,10 +219,6 @@ export async function prepararPedido(
   // 5) Resumo com valores reais + link do WhatsApp OFICIAL.
   //    Nenhum pedido é registrado nesta etapa.
   // ---------------------------------------------------------
-  const subtotal = itensResumo.reduce(
-    (total, item) => total + item.precoUnitario * item.quantidade,
-    0,
-  );
   // Frete grátis: a comparação usa o subtotal dos produtos em
   // CENTAVOS inteiros — R$ 129,99 paga a tarifa; R$ 130,00 é
   // grátis. A retirada no local é gratuita pela própria tarifa
@@ -231,13 +227,14 @@ export async function prepararPedido(
     (total, item) => total + paraCentavos(item.precoUnitario) * item.quantidade,
     0,
   );
+  const subtotal = subtotalCentavos / 100;
   const freteAplicado = calcularFreteAplicado(subtotalCentavos, faixa);
   const resumo: ResumoPedido = {
     itens: itensResumo,
     subtotal,
     frete: { id: faixa.id, nome: faixa.nome, valor: freteAplicado.valor },
     retirada: retiradaNoLocal(faixa.nome),
-    total: subtotal + freteAplicado.valor,
+    total: (subtotalCentavos + paraCentavos(freteAplicado.valor)) / 100,
     entrega: entrega.data,
     mensagemWhatsApp: "",
   };

@@ -400,10 +400,9 @@ export function FormularioProduto({
         <Aviso titulo="Ao salvar, as alterações são gravadas no banco">
           Nome, preço, categoria, descrição, composição, cuidados, status e
           destaque são gravados de verdade ao clicar em “Salvar alterações”.
-          Nesta etapa as cores, os tamanhos e o estoque continuam somente
-          leitura (a gravação deles chega com a migração das variações), e o
-          endereço da peça não muda — ele é usado nos links e nos caminhos
-          das fotos.
+          Ajuste as quantidades na seção “Estoque por variação”, acima.
+          As cores e os tamanhos existentes são somente leitura. O endereço
+          da peça permanece o mesmo para preservar seus links e fotos.
         </Aviso>
       ) : (
         <Aviso titulo="Ao salvar, a peça entra na loja como ativa">

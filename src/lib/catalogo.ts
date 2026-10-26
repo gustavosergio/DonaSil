@@ -18,6 +18,7 @@
 import { cache } from "react";
 import { z } from "zod";
 import { urlPublicaFoto } from "@/lib/fotos";
+import { MODO_DEMO } from "@/lib/site";
 
 // ------------------------------------------------------------
 // Erros da camada de dados
@@ -390,6 +391,7 @@ export async function listarProdutos(
   });
 
   const categoria = filtros.categoria?.trim();
+  if (!MODO_DEMO) params.set("demo", "eq.false");
   if (categoria) {
     params.set("categorias.slug", `eq.${categoria}`);
   }
@@ -421,6 +423,7 @@ export async function listarDestaques(): Promise<ProdutoResumo[]> {
     order: "nome.asc",
     limit: "8",
   });
+  if (!MODO_DEMO) params.set("demo", "eq.false");
   const linhas = await consultar(
     "produtos",
     params,
@@ -446,6 +449,7 @@ export const obterProduto = cache(async (slug: string): Promise<ProdutoCompleto 
     slug: `eq.${slug}`,
     limit: "1",
   });
+  if (!MODO_DEMO) params.set("demo", "eq.false");
   const linhas = await consultar(
     "produtos",
     params,

@@ -1,12 +1,12 @@
 // Configuração central do site.
 //
-// MODO_DEMO = true enquanto o catálogo usa apenas dados fictícios
-// (nomes, preços e fotos de exemplo). Na Etapa 10 este valor muda
-// para false e os avisos de demonstração desaparecem automaticamente.
+// Ausência da variável mantém a demonstração. Para abrir a vitrine,
+// configure NEXT_PUBLIC_MODO_DEMO=false e gere uma nova compilação.
+// Variáveis NEXT_PUBLIC são fixadas no build do Next.js.
 //
 // Os contatos abaixo já são os oficiais da loja.
 
-export const MODO_DEMO = true;
+export const MODO_DEMO = process.env.NEXT_PUBLIC_MODO_DEMO !== "false";
 
 export const site = {
   nome: "Dona Sil",
