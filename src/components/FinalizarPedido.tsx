@@ -37,7 +37,7 @@ import {
   indiceAposDigitos,
   soDigitos,
 } from "@/lib/mascaras";
-import type { DadosEntrega } from "@/lib/pedido";
+import { nomesPagamento, type FormaPagamento, type DadosEntrega } from "@/lib/pedido";
 import { useSacola } from "@/components/CarrinhoProvider";
 import {
   prepararPedido,
@@ -57,6 +57,7 @@ export default function FinalizarPedido({ faixas }: Props) {
   // Depois de conferir, a cliente pode voltar e editar os dados
   // (o resumo fica escondido até enviar de novo).
   const [editando, setEditando] = useState(false);
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>("pix");
   const [faixaSelecionada, setFaixaSelecionada] = useState(faixas[0]?.id ?? "");
 
   if (!carregado) {
@@ -202,6 +203,7 @@ export default function FinalizarPedido({ faixas }: Props) {
           ))}
         </ul>
 
+        <p className="mt-4 text-sm text-ink">Pagamento: {nomesPagamento[resumo.formaPagamento]}. {resumo.acrescimoCartao > 0 && "Cobrança a combinar pelo WhatsApp."}</p>
         <dl className="mt-6 space-y-2 text-sm">
           <div className="flex items-center justify-between">
             <dt className="text-ink-soft">Subtotal</dt>
@@ -219,6 +221,7 @@ export default function FinalizarPedido({ faixas }: Props) {
                 : formatarBRL(resumo.frete.valor)}
             </dd>
           </div>
+          {resumo.acrescimoCartao > 0 && <div className="flex items-center justify-between"><dt>Acréscimo cartão (15%)</dt><dd>{formatarBRL(resumo.acrescimoCartao)}</dd></div>}
           <div className="flex items-center justify-between border-t border-sand pt-3">
             <dt className="font-semibold text-ink">Total</dt>
             <dd className="font-display text-2xl font-semibold text-ink">
@@ -416,6 +419,17 @@ export default function FinalizarPedido({ faixas }: Props) {
       {/* Linhas da sacola: SÓ identificação e quantidade.
           Preço e estoque nunca vêm daqui — o servidor busca no
           catálogo oficial. */}
+      <fieldset className="rounded-3xl border border-sand bg-ivory px-6 py-6">
+        <legend className="font-semibold text-ink">Forma de pagamento</legend>
+        {(Object.entries(nomesPagamento) as [FormaPagamento, string][]).map(([valor, nome]) => (
+          <label key={valor} className="mt-3 flex items-center gap-3 text-sm text-ink">
+            <input type="radio" name="formaPagamento" value={valor} checked={formaPagamento === valor} onChange={() => setFormaPagamento(valor)} />
+            {nome}{(valor === "infinitepay" || valor === "maquininha") && " (+15%)"}
+          </label>
+        ))}
+        <p className="mt-3 text-sm text-ink-soft">No cartão, acréscimo de 15% sobre as peças. O frete é calculado separadamente. O link InfinitePay ou o uso da maquininha será combinado pelo WhatsApp. Confira o total na próxima etapa.</p>
+        {errosCampos.formaPagamento && <p role="alert">{errosCampos.formaPagamento}</p>}
+      </fieldset>
       <input type="hidden" name="itens" value={linhasParaEnviar} />
 
       <div className="flex flex-wrap items-center gap-3">

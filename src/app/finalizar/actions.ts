@@ -33,6 +33,8 @@ import {
 import { linkWhatsApp } from "@/lib/whatsapp";
 import {
   agruparPorVariacao,
+  formaPagamentoSchema,
+  acrescimoPagamento,
   dadosEntregaSchema,
   linhasSubmetidasSchema,
   montarMensagemWhatsApp,
@@ -62,6 +64,8 @@ export async function prepararPedido(
   // ---------------------------------------------------------
   // 1) Linhas submetidas: só identificação e quantidade.
   // ---------------------------------------------------------
+  const pagamento = formaPagamentoSchema.safeParse(formData.get("formaPagamento") ?? "pix");
+  if (!pagamento.success) return { ok: false, errosCampos: { formaPagamento: "Escolha uma forma de pagamento válida." } };
   let linhas: LinhaSubmetida[] | null = null;
   let problemaLinhas: string | null = null;
   try {
@@ -228,13 +232,16 @@ export async function prepararPedido(
     0,
   );
   const subtotal = subtotalCentavos / 100;
+  const acrescimoCentavos = acrescimoPagamento(subtotalCentavos, pagamento.data);
   const freteAplicado = calcularFreteAplicado(subtotalCentavos, faixa);
   const resumo: ResumoPedido = {
     itens: itensResumo,
     subtotal,
+    formaPagamento: pagamento.data,
+    acrescimoCartao: acrescimoCentavos / 100,
     frete: { id: faixa.id, nome: faixa.nome, valor: freteAplicado.valor },
     retirada: retiradaNoLocal(faixa.nome),
-    total: (subtotalCentavos + paraCentavos(freteAplicado.valor)) / 100,
+    total: (subtotalCentavos + acrescimoCentavos + paraCentavos(freteAplicado.valor)) / 100,
     entrega: entrega.data,
     mensagemWhatsApp: "",
   };

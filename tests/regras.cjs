@@ -20,6 +20,13 @@ function carregar(nome) {
 
 const frete = carregar('frete');
 const pedido = carregar('pedido');
+for (const forma of ['infinitepay', 'maquininha']) {
+  assert.equal(pedido.acrescimoPagamento(10000, forma), 1500);
+  assert.equal(pedido.acrescimoPagamento(1999, forma), 300);
+  assert.equal(pedido.acrescimoPagamento(0, forma), 0);
+}
+for (const forma of ['pix', 'dinheiro']) assert.equal(pedido.acrescimoPagamento(10000, forma), 0);
+assert.equal(pedido.formaPagamentoSchema.safeParse('cartao-sem-taxa').success, false);
 const cep = carregar('cep');
 const tarifas = [
   [frete.FAIXA_ZONA_NORTE, 9.99],

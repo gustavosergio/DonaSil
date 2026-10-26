@@ -476,14 +476,25 @@ export type ItemResumo = {
   precoUnitario: number;
 };
 
-/** Resumo pronto para conferência da cliente. `mensagemWhatsApp`
- *  é o texto do atendimento; `total` = subtotal + frete.
- *  `retirada` = true quando a faixa escolhida é a retirada no
- *  local: o endereço NÃO vai no resumo nem na mensagem — o
- *  local é combinado pelo atendimento no WhatsApp. */
+export const formaPagamentoSchema = z.enum(["pix", "dinheiro", "infinitepay", "maquininha"]);
+export type FormaPagamento = z.infer<typeof formaPagamentoSchema>;
+export const nomesPagamento: Record<FormaPagamento, string> = {
+  pix: "Pix", dinheiro: "Dinheiro", infinitepay: "Cartão por link InfinitePay", maquininha: "Cartão na maquininha",
+};
+
+/** Acréscimo da loja, calculado sobre os produtos em centavos; frete separado. */
+export function acrescimoPagamento(subtotalCentavos: number, forma: FormaPagamento): number {
+  return forma === "infinitepay" || forma === "maquininha"
+    ? Math.round(subtotalCentavos * 15 / 100) : 0;
+}
+
+/** Valores conferidos no servidor: total = subtotal + acréscimo + frete.
+ * Na retirada, o endereço é combinado pelo atendimento. */
 export type ResumoPedido = {
   itens: ItemResumo[];
   subtotal: number;
+  formaPagamento: FormaPagamento;
+  acrescimoCartao: number;
   frete: { id: string; nome: string; valor: number };
   retirada: boolean;
   total: number;
@@ -516,6 +527,8 @@ export function montarMensagemWhatsApp(resumo: ResumoPedido): string {
     ...pecas,
     "",
     `Subtotal: ${formatarMoeda(resumo.subtotal)}`,
+    `Pagamento: ${nomesPagamento[resumo.formaPagamento ?? "pix"]}`,
+    ...(resumo.acrescimoCartao > 0 ? [`Acréscimo cartão (15%): ${formatarMoeda(resumo.acrescimoCartao)}`, "Cobrança a combinar pelo WhatsApp."] : []),
     `Frete (${resumo.frete.nome}): ${freteTexto}`,
     `Total: ${formatarMoeda(resumo.total)}`,
     "",

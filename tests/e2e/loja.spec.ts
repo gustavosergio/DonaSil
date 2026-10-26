@@ -91,6 +91,25 @@ test("sacola persiste e confirma entrega com preços do servidor", async ({ page
   await expect(page.getByText("Seu pedido ainda NÃO foi registrado no site.")).toBeVisible();
 });
 
+for (const forma of ['Cartão por link InfinitePay', 'Cartão na maquininha']) {
+  test(`cartão com 15% e frete separado: ${forma}`, async ({ page }) => {
+    await adicionarPeca(page);
+    await page.goto('/finalizar');
+    await preencherEntrega(page);
+    await page.getByRole('radio', { name: /Zona Norte/ }).check();
+    await page.getByRole('radio', { name: `${forma} (+15%)`, exact: true }).check();
+    await page.getByRole('button', { name: 'Conferir e continuar' }).click();
+    const link = page.getByRole('link', { name: 'Enviar pedido no WhatsApp' });
+    await expect(link).toBeVisible();
+    const mensagem = new URL((await link.getAttribute('href'))!).searchParams.get('text')!;
+    expect(mensagem).toContain(`Pagamento: ${forma}`);
+    expect(mensagem).toMatch(/Acréscimo cartão \(15%\): R\$\s*18,00/);
+    expect(mensagem).toMatch(/Total: R\$\s*147,99/);
+    await page.getByRole('button', { name: /Editar/ }).click();
+    await expect(page.getByRole('radio', { name: `${forma} (+15%)`, exact: true })).toBeChecked();
+  });
+}
+
 test("retirada é gratuita e não expõe endereço no link", async ({ page }) => {
   await adicionarPeca(page);
   await page.goto("/finalizar");
