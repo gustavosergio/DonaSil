@@ -21,10 +21,10 @@ test("painel mostra aviso quando o catálogo fica indisponível", async ({ page,
     expect(falha.status()).toBe(200);
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Olá! Este é o painel da Dona Sil.' })).toBeVisible();
-    await expect(page.getByText('Não foi possível carregar os indicadores', { exact: true })).toBeVisible();
+    await expect(page.getByText('Não foi possível carregar os indicadores', { exact: true }).filter({ visible: true })).toBeVisible();
     await expect(page.getByRole('link', { name: /Produtos ativos/ })).toHaveCount(0);
     await page.goto('/admin/produtos/novo');
-    await expect(page.getByText('Não foi possível preparar o cadastro', { exact: true })).toBeVisible();
+    await expect(page.getByText('Não foi possível preparar o cadastro', { exact: true }).filter({ visible: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Salvar produto', exact: true })).toHaveCount(0);
   } finally {
     await request.post('http://127.0.0.1:4010/__test__/catalogo', { data: { falhar: false } });
