@@ -11,9 +11,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { io } from "next/cache";
+import { Aviso } from "@/components/admin/Aviso";
 import { FormularioProduto } from "@/components/admin/FormularioProduto";
 import { TituloSecao } from "@/components/admin/TituloSecao";
-import { listarCategorias, listarOpcoesVariacoes } from "@/lib/catalogo";
+import { CatalogoErro, listarCategorias, listarOpcoesVariacoes } from "@/lib/catalogo";
 
 export const metadata: Metadata = {
   title: "Cadastrar produto",
@@ -46,12 +48,25 @@ export default function PaginaNovoProduto() {
 }
 
 async function FormularioComCategorias() {
+  await io();
   // Categorias + cores/tamanhos reais das variações da loja
   // (nenhuma opção é inventada pelo painel).
-  const [categorias, opcoes] = await Promise.all([
-    listarCategorias(),
-    listarOpcoesVariacoes(),
-  ]);
+  let categorias: Awaited<ReturnType<typeof listarCategorias>>;
+  let opcoes: Awaited<ReturnType<typeof listarOpcoesVariacoes>>;
+  try {
+    [categorias, opcoes] = await Promise.all([
+      listarCategorias(),
+      listarOpcoesVariacoes(),
+    ]);
+  } catch (erro) {
+    if (!(erro instanceof CatalogoErro)) throw erro;
+    return (
+      <Aviso tonalidade="atencao" titulo="Não foi possível preparar o cadastro">
+        {erro.message} Recarregue a página depois de verificar a configuração
+        ou a conexão do catálogo.
+      </Aviso>
+    );
+  }
   return (
     <FormularioProduto
       modo="novo"
