@@ -155,7 +155,7 @@ async function ConteudoProdutos({ searchParams }: PropsConteudo) {
                 <Td>
                   <div className="flex justify-end gap-2">
                     <BotaoLink
-                      href={`/catalogo/${produto.slug}` as Route<"/catalogo/[slug]">}
+                      href={(produto.categoriaSlug === "desapego" ? `/desapego/${produto.slug}` : `/catalogo/${produto.slug}`) as Route}
                       tamanho="compacto"
                       variante="suave"
                       aria-label={`Ver ${produto.nome} na loja`}

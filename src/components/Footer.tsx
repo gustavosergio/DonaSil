@@ -29,6 +29,7 @@ export default function Footer() {
                 Catálogo
               </Link>
             </li>
+            <li><Link href="/desapego" className="transition hover:text-gold-ink">Desapego</Link></li>
           </ul>
         </nav>
 

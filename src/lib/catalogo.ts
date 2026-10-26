@@ -390,18 +390,21 @@ export async function listarCategorias(): Promise<CategoriaResumo[]> {
  * textual (nome + descrição). Os dois filtros combinam entre si.
  */
 export async function listarProdutos(
-  filtros: { categoria?: string; busca?: string } = {},
+  filtros: { categoria?: string; busca?: string; secao?: "moda" | "desapego" } = {},
 ): Promise<ProdutoResumo[]> {
   const params = new URLSearchParams({
-    select: filtros.categoria?.trim() ? SELECT_RESUMO_FILTRADO : SELECT_RESUMO,
+    select: filtros.categoria?.trim() || filtros.secao ? SELECT_RESUMO_FILTRADO : SELECT_RESUMO,
     ativo: "eq.true",
     order: "nome.asc",
   });
 
-  const categoria = filtros.categoria?.trim();
+  const categoria = filtros.secao === "desapego" ? "desapego" : filtros.categoria?.trim();
+  if (filtros.secao === "moda" && categoria === "desapego") return [];
   if (!MODO_DEMO) params.set("demo", "eq.false");
   if (categoria) {
     params.set("categorias.slug", `eq.${categoria}`);
+  } else if (filtros.secao === "moda") {
+    params.set("categorias.slug", "neq.desapego");
   }
 
   const busca = filtros.busca ? sanitizarBusca(filtros.busca) : "";
@@ -425,7 +428,8 @@ export async function listarProdutos(
  */
 export async function listarDestaques(): Promise<ProdutoResumo[]> {
   const params = new URLSearchParams({
-    select: SELECT_RESUMO,
+    select: SELECT_RESUMO_FILTRADO,
+    "categorias.slug": "neq.desapego",
     ativo: "eq.true",
     destaque: "eq.true",
     order: "nome.asc",

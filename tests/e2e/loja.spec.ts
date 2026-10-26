@@ -235,6 +235,65 @@ test("UF inexistente é recusada sem apagar os dados da cliente", async ({ page 
   await expect(page.getByLabel('UF', { exact: true })).toHaveValue('XX');
 });
 
+test("Desapego separa objetos da moda e combina transporte pelo WhatsApp", async ({ page }) => {
+  await page.goto('/desapego');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.getByRole('heading', { name: 'Quadro de teste', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Vestido Floral', exact: true })).toHaveCount(0);
+  await page.getByRole('link', { name: /Quadro de teste,.*ver detalhes/ }).click();
+  await expect(page.getByRole('heading', { name: 'Quadro de teste', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Adicionar à sacola' })).toHaveCount(0);
+  const contato = page.getByRole('link', { name: 'Tenho interesse — falar no WhatsApp' });
+  const destino = new URL((await contato.getAttribute('href'))!);
+  expect(destino.hostname).toBe('wa.me');
+  expect(destino.searchParams.get('text')).toContain('Quadro de teste');
+  await expect(page.getByText(/69,00 no cartão/)).toBeVisible();
+  await page.goto('/catalogo');
+  await expect(page.getByRole('heading', { name: 'Vestido Floral', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quadro de teste', exact: true })).toHaveCount(0);
+  await page.goto('/catalogo/quadro-teste');
+  await expect(page.getByRole('heading', { name: 'Essa página saiu da vitrine.' })).toBeVisible();
+  await page.goto('/desapego/vestido-floral');
+  await expect(page.getByRole('heading', { name: 'Essa página saiu da vitrine.' })).toBeVisible();
+});
+
+test("Desapego vazio apresenta aviso sem anúncios inventados", async ({ page, request }) => {
+  try {
+    await request.post('http://127.0.0.1:4010/__test__/desapego', { data: { mostrar: false } });
+    await page.goto('/desapego');
+    await expect(page.getByText('Os próximos desapegos estão chegando.')).toBeVisible();
+    await expect(page.getByRole('link', { name: /ver detalhes/ })).toHaveCount(0);
+  } finally { await request.post('http://127.0.0.1:4010/__test__/desapego', { data: { mostrar: true } }); }
+});
+
+test("painel prepara anúncio de Desapego com uma unidade", async ({ page }) => {
+  await page.goto('/admin/login');
+  await page.getByLabel('E-mail', { exact: true }).fill('admin@example.invalid');
+  await page.getByLabel('Senha', { exact: true }).fill('senha-ficticia-e2e');
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.goto('/admin/produtos/novo');
+  await page.getByLabel('Categoria', { exact: true }).selectOption('desapego');
+  await expect(page.getByRole('spinbutton', { name: 'Estoque do tamanho Único' })).toHaveValue('1');
+  await expect(page.getByPlaceholder(/Informe estado de conservação/)).toBeVisible();
+});
+
+test("servidor recusa cobrar frete de roupas para objetos de desapego", async ({ page }) => {
+  await adicionarPeca(page);
+  await page.evaluate(() => {
+    const chave = 'donasil:sacola:v1';
+    const sacola = JSON.parse(localStorage.getItem(chave)!);
+    sacola.itens = [{ ...sacola.itens[0], variacaoId: '00000000-0000-4000-8000-000000000007', produtoSlug: 'quadro-teste' }];
+    localStorage.setItem(chave, JSON.stringify(sacola));
+  });
+  await page.goto('/finalizar');
+  await preencherEntrega(page);
+  await page.getByRole('radio', { name: /Recife — Zona Norte/ }).check();
+  await page.getByRole('button', { name: 'Conferir e continuar' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'a compra dos itens de Desapego é combinada pelo WhatsApp' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Enviar pedido no WhatsApp' })).toHaveCount(0);
+});
+
 test("menu e tema funcionam e não há rolagem horizontal", async ({ page }, testInfo) => {
   await page.goto('/');
   if (testInfo.project.name === 'celular') {

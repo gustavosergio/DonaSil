@@ -4,6 +4,33 @@
    botão AlternarTema + script anti-flash no layout raiz. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* A seção de casa tem paleta própria, sem alterar a vitrine de moda. */
+.tema-desapego {
+  --font-playfair: var(--font-poppins);
+  --color-cream: #f5f6ef;
+  --color-ivory: #fffffa;
+  --color-champagne: #e7eee2;
+  --color-sand: #d6dfd2;
+  --color-gold: #28594b;
+  --color-gold-deep: #1b4237;
+  --color-gold-soft: #9bb69e;
+  --color-gold-ink: #28594b;
+  --color-ink: #18392f;
+  --color-ink-soft: #52675c;
+}
+html.dark .tema-desapego {
+  --color-cream: #13231e;
+  --color-ivory: #1b3028;
+  --color-champagne: #243e32;
+  --color-sand: #3b5547;
+  --color-gold: #a8cfb2;
+  --color-gold-deep: #bddfc5;
+  --color-gold-soft: #617f6b;
+  --color-gold-ink: #b6d7bc;
+  --color-ink: #edf3e9;
+  --color-ink-soft: #b3c7b9;
+}
+
 /* Fontes com "inline": cada valor APONTA para a variável criada
    pelo next/font — o Tailwind embute essa referência direto nos
    utilitários, sem criar variável intermediária. Esse é o uso

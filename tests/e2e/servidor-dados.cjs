@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- Servidor local de dados fictícios, sem acesso ao Supabase real. */
 const http = require('node:http');
 const id = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-const categorias = [{ id: id(1), nome: 'Vestidos', slug: 'vestidos', ordem: 1 }];
+const categorias = [{ id: id(1), nome: 'Vestidos', slug: 'vestidos', ordem: 1 }, { id: id(5), nome: 'Desapego', slug: 'desapego', ordem: 9 }];
 const variacoes = [{ id: id(3), tamanho: 'P', cor: 'Off-white', cor_hex: '#f5f0e8', quantidade: 2 }];
 const produto = {
   id: id(2), slug: 'vestido-floral', nome: 'Vestido Floral', preco: 120,
@@ -10,6 +10,8 @@ const produto = {
   categorias: categorias[0], variacoes, produto_cores: [],
 };
 const demo = { ...produto, id: id(4), slug: 'peca-demonstracao', nome: 'Peça de demonstração', demo: true };
+const objeto = { ...produto, id: id(6), slug: 'quadro-teste', nome: 'Quadro de teste', preco: 60, descricao: 'Quadro usado, 30 x 40 cm. Pequena marca na moldura.', composicao: '', cuidados: '', categorias: categorias[1], variacoes: [{ id: id(7), tamanho: 'Único', cor: 'Única', cor_hex: '#889988', quantidade: 1 }] };
+let mostrarDesapego = true;
 const nomes = ['Recife — Zona Norte', 'Recife — Zona Sul', 'Região Metropolitana do Recife', 'Interior de Pernambuco', 'Outros estados', 'Retirada no local — endereço combinado pelo WhatsApp'];
 const fretes = nomes.map((nome, i) => ({ id: id(10+i), nome, valor: [9.99,19.99,29.99,29.99,34.99,0][i], ativo: true, ordem: i+1 }));
 let falhaCatalogo = false;
@@ -20,6 +22,11 @@ http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const responder = (dados, status=200) => { res.statusCode=status; res.end(JSON.stringify(dados)); };
   if (url.pathname === '/') return responder({ teste: true });
+  if (url.pathname === '/__test__/desapego' && req.method === 'POST') {
+    let corpo = ''; for await (const parte of req) corpo += parte;
+    mostrarDesapego = JSON.parse(corpo).mostrar === true;
+    return responder({ ok: true });
+  }
   if (url.pathname === '/__test__/catalogo' && req.method === 'POST') {
     let corpo = '';
     for await (const parte of req) corpo += parte;
@@ -53,7 +60,10 @@ http.createServer(async (req, res) => {
   if (url.pathname === '/rest/v1/variacoes') return responder(variacoes);
   if (url.pathname === '/rest/v1/faixas_frete') return responder(fretes);
   if (url.pathname === '/rest/v1/produtos') {
-    let produtos = [produto, demo];
+    let produtos = [produto, demo, ...(mostrarDesapego ? [objeto] : [])];
+    const categoria = url.searchParams.get('categorias.slug');
+    if (categoria?.startsWith('eq.')) produtos = produtos.filter(p => p.categorias.slug === categoria.slice(3));
+    if (categoria?.startsWith('neq.')) produtos = produtos.filter(p => p.categorias.slug !== categoria.slice(4));
     if (url.searchParams.get('demo') === 'eq.false') produtos = produtos.filter(p=>!p.demo);
     if (url.searchParams.has('slug')) produtos = produtos.filter(p=>`eq.${p.slug}`===url.searchParams.get('slug'));
     const busca = url.searchParams.get('or');

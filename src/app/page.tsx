@@ -71,6 +71,12 @@ export default function Home() {
         </Suspense>
       </section>
 
+      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6" aria-labelledby="chamada-desapego">
+        <div className="flex flex-col justify-between gap-6 rounded-3xl bg-[#173d38] px-7 py-9 text-[#f4f5e9] sm:flex-row sm:items-center sm:px-10">
+          <div><p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#b8d3b7]">Um novo capítulo para cada objeto</p><h2 id="chamada-desapego" className="mt-3 text-3xl font-semibold">Nosso cantinho de desapegos.</h2><p className="mt-3 max-w-lg text-sm leading-7 text-[#d3e3db]">Objetos de casa, decoração e utilidades em uma seleção separada da moda Dona Sil.</p></div>
+          <Link href="/desapego" className="shrink-0 rounded-full bg-[#f2b989] px-6 py-3 text-center text-sm font-semibold text-[#243b32] transition hover:bg-[#f9cda8]">Conhecer o Desapego →</Link>
+        </div>
+      </section>
       {/* Novidades */}
       <section aria-labelledby="novidades" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="flex items-end justify-between">
@@ -162,7 +168,7 @@ async function CategoriasHome() {
   }
   return (
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {categorias.map((categoria) => (
+        {categorias.filter(categoria => categoria.slug !== "desapego").map((categoria) => (
           <li key={categoria.slug}>
             <Link href={`/catalogo?categoria=${encodeURIComponent(categoria.slug)}`}
               className="flex h-24 items-center justify-center rounded-2xl border border-sand bg-ivory text-sm font-medium text-ink transition hover:border-gold hover:text-gold-ink sm:h-28">

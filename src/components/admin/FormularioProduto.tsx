@@ -454,7 +454,14 @@ export function FormularioProduto({
           rotulo="Categoria"
           required
           value={valores.categoriaSlug}
-          onChange={(evento) => atualizar("categoriaSlug", evento.target.value)}
+          onChange={(evento) => {
+            const categoria = evento.target.value;
+            atualizar("categoriaSlug", categoria);
+            if (categoria === "desapego" && modo === "novo") {
+              setCores(atuais => atuais.length ? atuais : [{ nome: "Única", hex: "#8d9d8b" }]);
+              setTamanhos(atuais => atuais.length ? atuais : [{ tamanho: "Único", quantidade: 1 }]);
+            }
+          }}
           erro={erros.categoriaSlug}
         >
           <option value="">Escolha uma categoria…</option>
@@ -488,8 +495,9 @@ export function FormularioProduto({
         rows={4}
         value={valores.descricao}
         onChange={(evento) => atualizar("descricao", evento.target.value)}
-        placeholder="Conte para a cliente o que torna esta peça especial…"
+        placeholder={valores.categoriaSlug === "desapego" ? "Informe estado de conservação, marcas de uso, medidas, voltagem (quando houver), acessórios incluídos e condições de retirada…" : "Conte para a cliente o que torna esta peça especial…"}
       />
+      {valores.categoriaSlug === "desapego" && <p className="rounded-xl bg-champagne p-4 text-sm leading-7 text-ink-soft">Este anúncio aparece somente no Desapego. Preencha os detalhes de uso e medidas na descrição. Para um objeto único, use a cor “Única”, tamanho “Único” e estoque 1. A compra e o transporte são combinados pelo WhatsApp. Após salvar, adicione as fotos reais na edição do produto.</p>}
 
       <div className="grid gap-5 sm:grid-cols-2">
         <CampoTexto

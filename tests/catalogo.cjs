@@ -36,7 +36,14 @@ async function verificar(modoDemo) {
   await modulo.exports.listarProdutos({ categoria: 'vestidos', busca: 'floral' });
   await modulo.exports.listarDestaques();
   assert.equal(await modulo.exports.obterProduto('peca-demo'), null);
-  assert.equal(consultas.length, 4);
+  await modulo.exports.listarProdutos({ secao: 'moda' });
+  await modulo.exports.listarProdutos({ secao: 'desapego' });
+  assert.deepEqual(await modulo.exports.listarProdutos({ secao: 'moda', categoria: 'desapego' }), []);
+  assert.equal(consultas.length, 6);
+  assert.equal(consultas[2].searchParams.get('categorias.slug'), 'neq.desapego');
+  assert.equal(consultas[4].searchParams.get('categorias.slug'), 'neq.desapego');
+  assert.equal(consultas[5].searchParams.get('categorias.slug'), 'eq.desapego');
+  for (const indice of [2, 4, 5]) assert.match(consultas[indice].searchParams.get('select'), /categorias!inner/);
   for (const consulta of consultas) {
     assert.equal(consulta.searchParams.get('ativo'), 'eq.true');
     assert.equal(consulta.searchParams.get('demo'), modoDemo ? null : 'eq.false');

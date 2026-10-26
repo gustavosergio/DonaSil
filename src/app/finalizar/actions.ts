@@ -140,6 +140,11 @@ export async function prepararPedido(
       continue;
     }
 
+    if (produto.categoriaSlug === "desapego") {
+      problemas.push(`${produto.nome}: a compra dos itens de Desapego é combinada pelo WhatsApp, com transporte ou retirada próprios. Remova este item da sacola de roupas para continuar.`);
+      continue;
+    }
+
     // A variação precisa existir DE FATO neste produto.
     const variacao = produto.variacoes.find((v) => v.id === linha.variacaoId);
     if (!variacao) {

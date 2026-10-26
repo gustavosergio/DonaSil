@@ -89,6 +89,7 @@ async function ConteudoCatalogo({ searchParams }: PropsConteudo) {
     [categorias, produtos] = await Promise.all([
       listarCategorias(),
       listarProdutos({
+        secao: "moda",
         categoria: filtros.categoria ?? undefined,
         busca: filtros.busca ?? undefined,
       }),
@@ -120,7 +121,7 @@ async function ConteudoCatalogo({ searchParams }: PropsConteudo) {
               Todas
             </Link>
           </li>
-          {categorias.map((categoria) => (
+          {categorias.filter(categoria => categoria.slug !== "desapego").map((categoria) => (
             <li key={categoria.slug}>
               <Link
                 href={montarHref(categoria.slug, filtros.busca)}

@@ -21,7 +21,7 @@ export default function ProductCard({ produto }: { produto: ProdutoResumo }) {
 
   return (
     <Link
-      href={`/catalogo/${produto.slug}`}
+      href={produto.categoriaSlug === "desapego" ? `/desapego/${produto.slug}` : `/catalogo/${produto.slug}`}
       aria-label={`${rotulo} — ver detalhes`}
       className="group block"
     >

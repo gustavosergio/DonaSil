@@ -65,7 +65,7 @@ export default function Header() {
         </Link>
 
         <nav
-          className="hidden items-center gap-8 text-sm font-medium sm:flex"
+          className="hidden items-center gap-8 text-sm font-medium md:flex"
           aria-label="Navegação principal"
         >
           <Link href="/" className="text-ink-soft transition hover:text-gold-ink">
@@ -74,6 +74,7 @@ export default function Header() {
           <Link href="/catalogo" className="text-ink-soft transition hover:text-gold-ink">
             Catálogo
           </Link>
+          <Link href="/desapego" className="text-ink-soft transition hover:text-gold-ink">Desapego</Link>
           <LinkSacola />
           <AlternarTema />
           <a
@@ -86,11 +87,11 @@ export default function Header() {
           </a>
         </nav>
 
-        {/* Celular (<640px): tema e menu na mesma extremidade da
+        {/* Celular e tablet estreito (<768px): tema e menu na mesma extremidade da
             barra — o tema NÃO depende de o menu estar aberto.
-            No desktop (≥640px) o conjunto some: o tema já aparece
+            No desktop (≥768px) o conjunto some: o tema já aparece
             na navegação e o menu vira hambúrguer escondido. */}
-        <div className="flex items-center gap-1 sm:hidden">
+        <div className="flex items-center gap-1 md:hidden">
           <AlternarTema />
           <button
             type="button"
@@ -121,7 +122,7 @@ export default function Header() {
       {menuAberto && (
         <nav
           id="menu-mobile"
-          className="border-t border-sand bg-ivory px-4 py-4 sm:hidden"
+          className="border-t border-sand bg-ivory px-4 py-4 md:hidden"
           aria-label="Navegação principal"
         >
           <ul className="flex flex-col gap-1 text-sm font-medium">
@@ -143,6 +144,7 @@ export default function Header() {
                 Catálogo
               </Link>
             </li>
+            <li><Link href="/desapego" onClick={() => setMenuAberto(false)} className="block rounded-lg px-3 py-3 text-ink transition hover:bg-champagne">Desapego</Link></li>
             <li>
               <div className="rounded-lg px-3 py-3 transition hover:bg-champagne">
                 <LinkSacola aoNavegar={() => setMenuAberto(false)} />
