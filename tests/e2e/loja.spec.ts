@@ -66,6 +66,29 @@ test("vitrine real, categorias e busca sem peças de demonstração", async ({ p
   await expect(page.locator("html")).toHaveJSProperty("scrollWidth", await page.locator("html").evaluate(el => el.clientWidth));
 });
 
+test("catálogo combina categorias, preserva busca e permite desmarcar", async ({ page }) => {
+  await page.goto('/catalogo');
+  const filtros = page.getByRole('navigation', { name: 'Filtrar por categoria' });
+  await filtros.getByRole('link', { name: 'Vestidos', exact: true }).click();
+  await expect(page).toHaveURL(/categoria=vestidos/);
+  await expect(page.getByRole('heading', { name: 'Blusa Básica', exact: true })).toHaveCount(0);
+  await filtros.getByRole('link', { name: 'Blusas', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Blusa Básica', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Vestido Floral', exact: true })).toBeVisible();
+  expect(new URL(page.url()).searchParams.getAll('categoria')).toEqual(['vestidos', 'blusas']);
+  await page.reload();
+  await page.getByRole('searchbox').fill('floral');
+  await page.getByRole('button', { name: 'Buscar', exact: true }).click();
+  await expect(page).toHaveURL(/q=floral/);
+  expect(new URL(page.url()).searchParams.getAll('categoria')).toEqual(['vestidos', 'blusas']);
+  await filtros.getByRole('link', { name: 'Blusas', exact: true }).click();
+  await expect(page).not.toHaveURL(/categoria=blusas/);
+  expect(new URL(page.url()).searchParams.getAll('categoria')).toEqual(['vestidos']);
+  expect(new URL(page.url()).searchParams.get('q')).toBe('floral');
+  await page.getByRole('link', { name: 'Limpar filtros', exact: true }).click();
+  await expect(page).toHaveURL(/\/catalogo$/);
+});
+
 test("link direto não abre produto de demonstração", async ({ page }) => {
   await page.goto("/catalogo/peca-demonstracao");
   await expect(page.getByRole("button", { name: "Adicionar à sacola" })).toHaveCount(0);

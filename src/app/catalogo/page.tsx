@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 // Filtros da URL (?categoria=slug&q=texto)
 // ------------------------------------------------------------
 
-type Filtros = { categoria: string | null; busca: string | null };
+type Filtros = { categorias: string[]; busca: string | null };
 
 function primeiroValor(valor: string | string[] | undefined): string | null {
   if (Array.isArray(valor)) return valor[0] ?? null;
@@ -29,15 +29,15 @@ function primeiroValor(valor: string | string[] | undefined): string | null {
 
 function lerFiltros(searchParams: Record<string, string | string[] | undefined>): Filtros {
   return {
-    categoria: primeiroValor(searchParams.categoria),
+    categorias: [...new Set((Array.isArray(searchParams.categoria) ? searchParams.categoria : searchParams.categoria ? [searchParams.categoria] : []).map(valor => valor.trim()).filter(valor => /^[a-z0-9_-]{1,80}$/.test(valor)))].slice(0, 20),
     busca: primeiroValor(searchParams.q),
   };
 }
 
 /** Monta o link do catálogo mantendo os filtros escolhidos. */
-function montarHref(categoria: string | null, busca: string | null): Route<"/catalogo"> {
+function montarHref(categorias: string[], busca: string | null): Route<"/catalogo"> {
   const params = new URLSearchParams();
-  if (categoria) params.set("categoria", categoria);
+  for (const categoria of categorias) params.append("categoria", categoria);
   if (busca) params.set("q", busca);
   const query = params.toString();
   return (`/catalogo${query ? `?${query}` : ""}`) as Route<"/catalogo">;
@@ -90,7 +90,7 @@ async function ConteudoCatalogo({ searchParams }: PropsConteudo) {
       listarCategorias(),
       listarProdutos({
         secao: "moda",
-        categoria: filtros.categoria ?? undefined,
+        categorias: filtros.categorias,
         busca: filtros.busca ?? undefined,
       }),
     ]);
@@ -98,10 +98,7 @@ async function ConteudoCatalogo({ searchParams }: PropsConteudo) {
     return <AvisoErro erro={erro} />;
   }
 
-  const temFiltroAtivo =
-    (filtros.categoria !== null && filtros.busca !== null) ||
-    filtros.categoria !== null ||
-    filtros.busca !== null;
+  const temFiltroAtivo = filtros.categorias.length > 0 || filtros.busca !== null;
 
   return (
     <>
@@ -110,10 +107,10 @@ async function ConteudoCatalogo({ searchParams }: PropsConteudo) {
         <ul className="flex flex-wrap gap-2">
           <li>
             <Link
-              href={montarHref(null, filtros.busca)}
-              aria-current={filtros.categoria === null ? "page" : undefined}
+              href={montarHref([], filtros.busca)}
+              aria-current={filtros.categorias.length === 0 ? "page" : undefined}
               className={
-                filtros.categoria === null
+                filtros.categorias.length === 0
                   ? "rounded-full border border-gold bg-gold px-4 py-2 text-sm font-medium text-ink dark:text-[#2b2420]"
                   : "rounded-full border border-sand bg-ivory px-4 py-2 text-sm font-medium text-ink-soft transition hover:border-gold hover:text-gold-ink"
               }
@@ -124,33 +121,32 @@ async function ConteudoCatalogo({ searchParams }: PropsConteudo) {
           {categorias.filter(categoria => categoria.slug !== "desapego").map((categoria) => (
             <li key={categoria.slug}>
               <Link
-                href={montarHref(categoria.slug, filtros.busca)}
-                aria-current={
-                  filtros.categoria === categoria.slug ? "page" : undefined
-                }
+                href={montarHref(filtros.categorias.includes(categoria.slug) ? filtros.categorias.filter(slug => slug !== categoria.slug) : [...filtros.categorias, categoria.slug], filtros.busca)}
+                aria-describedby={filtros.categorias.includes(categoria.slug) ? "categoria-selecionada" : undefined}
                 className={
-                  filtros.categoria === categoria.slug
+                  filtros.categorias.includes(categoria.slug)
                     ? "rounded-full border border-gold bg-gold px-4 py-2 text-sm font-medium text-ink dark:text-[#2b2420]"
                     : "rounded-full border border-sand bg-ivory px-4 py-2 text-sm font-medium text-ink-soft transition hover:border-gold hover:text-gold-ink"
                 }
               >
-                {categoria.nome}
+                {filtros.categorias.includes(categoria.slug) && <span aria-hidden="true">✓ </span>}{categoria.nome}
               </Link>
             </li>
           ))}
         </ul>
       </nav>
 
-      {/* Busca: formulário GET simples, mantém a categoria ativa */}
+      <p className="mt-4 text-xs text-ink-soft">Selecione uma ou mais categorias. Clique novamente para desmarcar.</p>
+      <p id="categoria-selecionada" className="sr-only">Categoria selecionada. Ative novamente para remover o filtro.</p>
+
+      {/* A busca preserva todas as categorias selecionadas. */}
       <form
         action="/catalogo"
         method="get"
         role="search"
         className="mt-4 flex flex-wrap items-center gap-2"
       >
-        {filtros.categoria && (
-          <input type="hidden" name="categoria" value={filtros.categoria} />
-        )}
+        {filtros.categorias.map(categoria => <input key={categoria} type="hidden" name="categoria" value={categoria} />)}
         <label htmlFor="busca-catalogo" className="sr-only">
           Buscar peças pelo nome ou descrição
         </label>
@@ -170,7 +166,7 @@ async function ConteudoCatalogo({ searchParams }: PropsConteudo) {
         </button>
         {temFiltroAtivo && (
           <Link
-            href={montarHref(null, null)}
+            href={montarHref([], null)}
             className="text-sm font-medium text-gold-ink hover:underline"
           >
             Limpar filtros
@@ -199,7 +195,7 @@ async function ConteudoCatalogo({ searchParams }: PropsConteudo) {
           </p>
           {temFiltroAtivo && (
             <Link
-              href={montarHref(null, null)}
+              href={montarHref([], null)}
               className="mt-6 inline-block rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold-ink transition hover:bg-champagne"
             >
               Ver todas as peças

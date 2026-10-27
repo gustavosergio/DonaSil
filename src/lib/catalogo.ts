@@ -390,19 +390,20 @@ export async function listarCategorias(): Promise<CategoriaResumo[]> {
  * textual (nome + descrição). Os dois filtros combinam entre si.
  */
 export async function listarProdutos(
-  filtros: { categoria?: string; busca?: string; secao?: "moda" | "desapego" } = {},
+  filtros: { categoria?: string; categorias?: string[]; busca?: string; secao?: "moda" | "desapego" } = {},
 ): Promise<ProdutoResumo[]> {
+  const solicitadas = filtros.categorias?.length ? filtros.categorias : filtros.categoria?.trim() ? [filtros.categoria.trim()] : [];
+  const categorias = filtros.secao === "desapego" ? ["desapego"] : [...new Set(solicitadas.map(categoria => categoria.trim()).filter(categoria => /^[a-z0-9_-]{1,80}$/.test(categoria) && !(filtros.secao === "moda" && categoria === "desapego")))].slice(0, 20);
+  if (solicitadas.length && !categorias.length) return [];
   const params = new URLSearchParams({
-    select: filtros.categoria?.trim() || filtros.secao ? SELECT_RESUMO_FILTRADO : SELECT_RESUMO,
+    select: categorias.length || filtros.secao ? SELECT_RESUMO_FILTRADO : SELECT_RESUMO,
     ativo: "eq.true",
     order: "nome.asc",
   });
 
-  const categoria = filtros.secao === "desapego" ? "desapego" : filtros.categoria?.trim();
-  if (filtros.secao === "moda" && categoria === "desapego") return [];
   if (!MODO_DEMO) params.set("demo", "eq.false");
-  if (categoria) {
-    params.set("categorias.slug", `eq.${categoria}`);
+  if (categorias.length) {
+    params.set("categorias.slug", categorias.length === 1 ? `eq.${categorias[0]}` : `in.(${categorias.join(",")})`);
   } else if (filtros.secao === "moda") {
     params.set("categorias.slug", "neq.desapego");
   }

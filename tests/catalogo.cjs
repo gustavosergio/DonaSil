@@ -51,6 +51,13 @@ async function verificar(modoDemo) {
   assert.equal(consultas[1].searchParams.get('categorias.slug'), 'eq.vestidos');
   assert.equal(consultas[2].searchParams.get('destaque'), 'eq.true');
   assert.equal(consultas[3].searchParams.get('slug'), 'eq.peca-demo');
+  await modulo.exports.listarProdutos({ secao: 'moda', categorias: ['vestidos', 'blusas', 'vestidos'], busca: 'floral' });
+  assert.equal(consultas[6].searchParams.get('categorias.slug'), 'in.(vestidos,blusas)');
+  assert.ok(consultas[6].searchParams.get('or').includes('floral'));
+  await modulo.exports.listarProdutos({ secao: 'moda', categorias: ['desapego', 'vestidos'] });
+  assert.equal(consultas[7].searchParams.get('categorias.slug'), 'eq.vestidos');
+  assert.deepEqual(await modulo.exports.listarProdutos({ categorias: ['vestidos),demo.eq.true'] }), []);
+  assert.equal(consultas.length, 8);
 }
 
 const fetchOriginal = global.fetch;
