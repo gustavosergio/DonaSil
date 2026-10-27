@@ -20,7 +20,8 @@ import {
   IconeSacola,
   IconeTag,
 } from "@/components/admin/Icones";
-import { CatalogoErro, listarCategorias, listarProdutos } from "@/lib/catalogo";
+import { CatalogoErro, listarCategorias } from "@/lib/catalogo";
+import { listarProdutosPainel, PainelErro } from "@/lib/painel-crud";
 
 export default function PaginaVisaoGeral() {
   return (
@@ -56,18 +57,18 @@ async function IndicadoresReais() {
   // Indicadores dependem do catálogo de cada requisição, não do ambiente
   // disponível durante a compilação (que pode não ter credenciais).
   await io();
-  let produtos: Awaited<ReturnType<typeof listarProdutos>>;
+  let produtos: Awaited<ReturnType<typeof listarProdutosPainel>>;
   let categorias: Awaited<ReturnType<typeof listarCategorias>>;
   try {
     [produtos, categorias] = await Promise.all([
-      listarProdutos(),
+      listarProdutosPainel(),
       listarCategorias(),
     ]);
   } catch (erro) {
     // Configuração ausente e indisponibilidade do catálogo não devem
     // derrubar o painel nem ser apresentadas como contadores zerados.
     // Erros internos do Next continuam propagando normalmente.
-    if (!(erro instanceof CatalogoErro)) throw erro;
+    if (!(erro instanceof CatalogoErro) && !(erro instanceof PainelErro)) throw erro;
     return (
       <Aviso tonalidade="atencao" titulo="Não foi possível carregar os indicadores">
         {erro.message} Recarregue a página depois de verificar a configuração
