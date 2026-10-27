@@ -2,7 +2,7 @@
 
 ## Estado da integração
 
-Código preparado para cotar PAC/SEDEX pela API do Melhor Envio. A cotação real depende da conta da loja, credencial autorizada e peso/dimensões reais. Enquanto a configuração estiver incompleta, a tela avisa que a consulta está em preparação; nenhum valor é inventado e pedidos abaixo do limite de gratuidade não são finalizados com frete zero.
+Cotação PAC/SEDEX ativada na Cloudflare em 27/10/2026. Token pessoal limitado a `shipping-calculate`, guardado como secret do Worker. CEP de origem e contato técnico também ficam em secrets. Consulta real no domínio público e reconferência no resumo aprovadas: teste para 01001-000 retornou PAC R$ 30,66 / 6 dias úteis e SEDEX R$ 63,10 / 2 dias úteis. Esses valores são evidência do teste, não uma tabela fixa.
 
 Recife: Zona Norte R$ 14,99 e Zona Sul R$ 21,99. Retirada gratuita. Mantida a promoção: subtotal dos produtos estritamente acima de R$ 129,99 tem frete grátis, também para outras cidades. O acréscimo de cartão não conta para atingir a promoção.
 
@@ -16,7 +16,7 @@ Configure na Cloudflare, somente no ambiente do Worker:
 - `FRETE_PESO_PECA_KG`: peso de uma peça embalada, em kg.
 - `FRETE_ALTURA_PECA_CM`, `FRETE_LARGURA_PECA_CM`, `FRETE_COMPRIMENTO_PECA_CM`: dimensões reais de uma peça embalada, em cm.
 
-Esse padrão único só deve ser ativado se for adequado a todas as peças enviadas. Peças com embalagens muito diferentes precisam de medidas por produto antes de usar a cotação. Não preencher medidas presumidas. A quantidade e o valor segurado vêm do catálogo revalidado, nunca dos preços guardados no navegador.
+Padrão escolhido pela responsável: 500 g e altura 25 × largura 20 × comprimento 20 cm por peça embalada. Como essas medidas foram informadas como aproximação, conferir o pacote pronto antes da postagem e atualizar a configuração se necessário. Peças com embalagens muito diferentes precisam de medidas por produto. A quantidade e o valor segurado vêm do catálogo revalidado, nunca dos preços guardados no navegador.
 
 Armazene o token como secret do Worker, nunca em `wrangler.jsonc`, GitHub ou variável NEXT_PUBLIC. Atualize ou renove a credencial antes do vencimento informado pelo Melhor Envio. A falta de credencial válida bloqueia a cotação; não utiliza uma tabela aproximada como substituição. O fluxo não compra etiquetas, não adiciona saldo e não realiza pagamentos.
 
@@ -28,4 +28,4 @@ Documentação oficial: https://docs.melhorenvio.com.br/reference/calculo-de-fre
 
 ## Endereço por CEP
 
-Rua e número têm campos separados. Rua, bairro, cidade e UF ficam somente leitura e o servidor confere o endereço na ViaCEP. CEP genérico sem rua/bairro completos pede um CEP específico ou atendimento. Trocar o CEP limpa os dados anteriores e invalida a cotação. O número pode conter `S/N`; complemento é opcional.
+Rua e número têm campos separados. Rua, bairro, cidade e UF ficam somente leitura e o servidor confere o endereço na ViaCEP, com BrasilAPI como alternativa em falhas de rede. CEP genérico sem rua/bairro completos pede um CEP específico ou atendimento. Trocar o CEP limpa os dados anteriores e invalida a cotação. O número pode conter `S/N`; complemento é opcional.

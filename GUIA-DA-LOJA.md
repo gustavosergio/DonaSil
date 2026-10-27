@@ -33,6 +33,6 @@ As solicitações do WhatsApp não são registradas automaticamente na lista de 
 
 ## Frete e endereço
 
-Recife Zona Norte: R$ 14,99; Zona Sul: R$ 21,99. Retirada grátis. Pedidos acima de R$ 129,99 em produtos mantêm frete grátis. A integração Melhor Envio para outras cidades depende da conexão da conta e das medidas reais; consulte [MELHOR-ENVIO.md](MELHOR-ENVIO.md).
+Recife Zona Norte: R$ 14,99; Zona Sul: R$ 21,99. Retirada grátis. Pedidos acima de R$ 129,99 em produtos mantêm frete grátis. A integração Melhor Envio para outras cidades está ativa usando o padrão informado de 500 g e 25 × 20 × 20 cm; confira o pacote antes de postar e consulte [MELHOR-ENVIO.md](MELHOR-ENVIO.md).
 
 No checkout, informe o CEP e o número em campos separados. Rua, bairro, cidade e UF são confirmados pelo CEP e ficam bloqueados. Para corrigir o endereço, troque o CEP.

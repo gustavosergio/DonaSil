@@ -10,6 +10,12 @@
     { "pattern": "www.donasilmodafeminina.com.br", "custom_domain": true }
   ],
   "keep_vars": true,
+  "vars": {
+    "FRETE_PESO_PECA_KG": "0.5",
+    "FRETE_ALTURA_PECA_CM": "25",
+    "FRETE_LARGURA_PECA_CM": "20",
+    "FRETE_COMPRIMENTO_PECA_CM": "20"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
