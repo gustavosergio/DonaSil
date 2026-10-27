@@ -35,7 +35,7 @@ import { TituloSecao } from "@/components/admin/TituloSecao";
 
 type FiltroSituacao = "todas" | "disponivel" | "esgotado";
 
-type Filtros = { busca: string | null; categoria: string | null; situacao: FiltroSituacao };
+type Filtros = { busca: string | null; categoria: string | null; situacao: FiltroSituacao; cadastro: "reais" | "rascunhos" };
 
 function primeiroValor(valor: string | string[] | undefined): string | null {
   if (Array.isArray(valor)) return valor[0] ?? null;
@@ -45,6 +45,7 @@ function primeiroValor(valor: string | string[] | undefined): string | null {
 function lerFiltros(searchParams: Record<string, string | string[] | undefined>): Filtros {
   const situacao = primeiroValor(searchParams.situacao);
   return {
+    cadastro: primeiroValor(searchParams.cadastro) === "rascunhos" ? "rascunhos" : "reais",
     busca: primeiroValor(searchParams.q),
     categoria: primeiroValor(searchParams.categoria),
     situacao:
@@ -57,7 +58,7 @@ export default function PaginaProdutosPainel(props: PageProps<"/admin/produtos">
     <>
       <TituloSecao
         titulo="Produtos"
-        descricao="Todas as peças do banco — ativas e rascunhos — pelo acesso de administradora. Use a busca e os filtros para encontrar uma peça."
+        descricao="Produtos reais da loja. Para continuar um cadastro ainda não publicado, selecione Rascunhos no filtro."
         acoes={
           <BotaoLink href="/admin/produtos/novo">
             <IconeMais className="h-4 w-4" />
@@ -92,6 +93,12 @@ async function ConteudoProdutos({ searchParams }: PropsConteudo) {
     return <AvisoErro erro={erro} />;
   }
 
+  // A lista principal e seus totais mostram somente produtos reais ativos.
+  // Rascunhos reais continuam acessíveis para concluir novos cadastros.
+  produtos = produtos.filter((produto) => !produto.demo && (
+    filtros.cadastro === "rascunhos" ? !produto.ativo : produto.ativo
+  ));
+
   // Situação do estoque: filtro local sobre dados reais.
   if (filtros.situacao === "disponivel") {
     produtos = produtos.filter((produto) => produto.disponivel);
@@ -100,7 +107,7 @@ async function ConteudoProdutos({ searchParams }: PropsConteudo) {
   }
 
   const temFiltro =
-    filtros.busca !== null || filtros.categoria !== null || filtros.situacao !== "todas";
+    filtros.busca !== null || filtros.categoria !== null || filtros.situacao !== "todas" || filtros.cadastro !== "reais";
 
   // Contagem honesta por status (para o rodapé da lista).
   const ativas = produtos.filter((produto) => produto.ativo).length;
@@ -197,11 +204,11 @@ async function ConteudoProdutos({ searchParams }: PropsConteudo) {
       )}
 
       <p className="mt-4 text-xs leading-6 text-ink-soft">
-        {produtos.length} {produtos.length === 1 ? "peça" : "peças"} no banco:{" "}
+        {produtos.length} {produtos.length === 1 ? "peça real nesta lista" : "peças reais nesta lista"}:{" "}
         {ativas} {ativas === 1 ? "ativa" : "ativas"}
         {rascunhos > 0 &&
           ` e ${rascunhos} ${rascunhos === 1 ? "rascunho" : "rascunhos"}`}
-        . Rascunhos não aparecem na loja pública.
+        . Demonstrações não aparecem nesta lista. Rascunhos ficam no filtro separado e não aparecem na loja pública.
       </p>
     </>
   );
@@ -225,6 +232,18 @@ function FiltrosProdutos({
       role="search"
       className="mb-6 flex flex-wrap items-end gap-3"
     >
+      <div>
+        <label htmlFor="filtro-cadastro" className="sr-only">Filtrar por cadastro</label>
+        <select
+          id="filtro-cadastro"
+          name="cadastro"
+          defaultValue={filtros.cadastro}
+          className="rounded-xl border border-sand bg-ivory px-3.5 py-2.5 text-sm text-ink focus:border-gold focus:outline-none"
+        >
+          <option value="reais">Produtos reais</option>
+          <option value="rascunhos">Rascunhos</option>
+        </select>
+      </div>
       <div>
         <label htmlFor="filtro-busca" className="sr-only">
           Buscar por nome

@@ -21,7 +21,6 @@ import {
   IconeTag,
 } from "@/components/admin/Icones";
 import { CatalogoErro, listarCategorias, listarProdutos } from "@/lib/catalogo";
-import { MODO_DEMO } from "@/lib/site";
 
 export default function PaginaVisaoGeral() {
   return (
@@ -37,12 +36,6 @@ export default function PaginaVisaoGeral() {
         devolva a unidade ao estoque. Faça o mesmo nas vendas realizadas fora do site.
       </Aviso>
 
-      {MODO_DEMO && (
-        <Aviso tonalidade="atencao" titulo="Modo demonstração">
-          O catálogo atual usa peças fictícias para testar a loja antes do
-          lançamento. Elas continuam visíveis no site — nada muda por enquanto.
-        </Aviso>
-      )}
 
       <div className="mt-8">
         <Suspense fallback={<EsqueletoIndicadores />}>
@@ -86,9 +79,9 @@ async function IndicadoresReais() {
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       <Indicador
-        valor={produtos.length}
+        valor={produtos.filter((produto) => produto.ativo && !produto.demo).length}
         rotulo="Produtos ativos"
-        nota={MODO_DEMO ? "Peças visíveis na loja (demonstração incluída)." : "Peças reais visíveis na loja."}
+        nota="Peças reais visíveis na loja."
         href="/admin/produtos"
       />
       <Indicador
