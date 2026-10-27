@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 
 export default function GaleriaPeca({ fotos, nome }: { fotos: string[]; nome: string }) {
   const [selecionada, setSelecionada] = useState(0);
@@ -43,13 +43,28 @@ export default function GaleriaPeca({ fotos, nome }: { fotos: string[]; nome: st
     });
   }
 
+  function ampliarComMouse(evento: PointerEvent<HTMLButtonElement>) {
+    if (evento.pointerType !== "mouse") return;
+    const area = evento.currentTarget;
+    const limites = area.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, (evento.clientX - limites.left) / limites.width * 100));
+    const y = Math.max(0, Math.min(100, (evento.clientY - limites.top) / limites.height * 100));
+    area.style.setProperty("--zoom-foto", "2.5");
+    area.style.setProperty("--origem-foto", `${x}% ${y}%`);
+  }
+
+  function encerrarZoomMouse(evento: PointerEvent<HTMLButtonElement>) {
+    evento.currentTarget.style.setProperty("--zoom-foto", "1");
+    evento.currentTarget.style.removeProperty("--origem-foto");
+  }
+
   if (!fotos.length) return null;
   return (
     <section aria-label={`Fotos de ${nome}`}>
-      <button type="button" onClick={abrirZoom} aria-label={`Ampliar foto ${atual + 1} de ${nome}`} className="relative block aspect-[3/4] w-full cursor-zoom-in overflow-hidden rounded-3xl bg-champagne focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold">
+      <button type="button" onClick={abrirZoom} onPointerEnter={ampliarComMouse} onPointerMove={ampliarComMouse} onPointerLeave={encerrarZoomMouse} onPointerCancel={encerrarZoomMouse} aria-label={`Ampliar foto ${atual + 1} de ${nome}`} className="relative block aspect-[3/4] w-full cursor-zoom-in select-none overflow-hidden rounded-3xl bg-champagne focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={fotos[atual]} alt={`${nome} — foto ${atual + 1} de ${fotos.length}`} className="absolute inset-0 h-full w-full object-contain" />
-        <span aria-hidden="true" className="absolute bottom-4 right-4 rounded-full bg-black/70 px-4 py-2 text-xs font-medium text-white">＋ Ampliar foto</span>
+        <img src={fotos[atual]} alt={`${nome} — foto ${atual + 1} de ${fotos.length}`} draggable={false} style={{ transform: "scale(var(--zoom-foto, 1))", transformOrigin: "var(--origem-foto, 50% 50%)" }} className="absolute inset-0 h-full w-full object-contain transition-transform duration-150 ease-out motion-reduce:transition-none" />
+        <span aria-hidden="true" className="pointer-events-none absolute bottom-4 right-4 rounded-full bg-black/70 px-4 py-2 text-xs font-medium text-white">Passe o mouse ou toque para ampliar</span>
       </button>
       {fotos.length > 1 && (
         <div className="mt-3 flex flex-wrap gap-3" aria-label="Escolher foto">

@@ -294,6 +294,27 @@ test("servidor recusa cobrar frete de roupas para objetos de desapego", async ({
   await expect(page.getByRole('link', { name: 'Enviar pedido no WhatsApp' })).toHaveCount(0);
 });
 
+test("zoom ao passar o mouse acompanha o cursor e preserva toque no celular", async ({ page }, testInfo) => {
+  await page.goto('/catalogo/vestido-floral');
+  const foto = page.getByRole('button', { name: 'Ampliar foto 1 de Vestido Floral', exact: true });
+  const imagem = foto.getByRole('img');
+  if (testInfo.project.name === 'celular') {
+    await foto.tap();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: 'Fechar imagem ampliada', exact: true }).click();
+    await expect(imagem).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+  } else {
+    await foto.hover({ position: { x: 30, y: 30 } });
+    await expect(imagem).toHaveCSS('transform', 'matrix(2.5, 0, 0, 2.5, 0, 0)');
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    const origem = await imagem.evaluate(elemento => getComputedStyle(elemento).transformOrigin);
+    await foto.hover({ position: { x: 180, y: 220 } });
+    expect(await imagem.evaluate(elemento => getComputedStyle(elemento).transformOrigin)).not.toBe(origem);
+    await page.mouse.move(0, 0);
+    await expect(imagem).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+  }
+});
+
 test("zoom das fotos amplia, troca imagens e fecha pelo teclado", async ({ page }) => {
   await page.goto('/catalogo/vestido-floral');
   await page.getByRole('button', { name: 'Ampliar foto 1 de Vestido Floral', exact: true }).click();
