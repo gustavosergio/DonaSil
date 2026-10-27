@@ -41,6 +41,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { COOKIE_TOKEN, verificarAdminPainel } from "@/lib/painel-auth";
+import { tomDaCor } from "@/lib/cores";
 import {
   BUCKET_FOTOS,
   LIMITE_FOTO_BYTES,
@@ -95,6 +96,8 @@ const corComProdutoSchema = z.array(
   z.object({
     id: z.uuid(),
     produto_id: z.uuid(),
+    nome: z.string(),
+    cor_hex: z.string(),
     produtos: z.object({ slug: z.string().min(1) }),
   }),
 );
@@ -138,7 +141,7 @@ function validar<TSchema extends z.ZodType>(
 // ------------------------------------------------------------
 
 type OpcoesChamada = {
-  method: "GET" | "POST" | "DELETE";
+  method: "GET" | "POST" | "DELETE" | "PATCH";
   params?: URLSearchParams;
   corpo?: unknown;
   /** `Prefer: return=representation` — o INSERT devolve as
@@ -264,7 +267,7 @@ async function enviarArquivo(
     });
     throw new ErroFoto(
       502,
-      "Não foi possível enviar o arquivo para o armazenamento. Nada foi gravado — tente de novo.",
+      "Não foi possível enviar o arquivo para o armazenamento. A foto não foi gravada — tente de novo.",
     );
   }
 }
@@ -339,6 +342,7 @@ async function sessaoAdmin(request: NextRequest): Promise<string> {
 // ------------------------------------------------------------
 
 export async function POST(request: NextRequest) {
+  let corAlterada = false;
   const config = configurar();
   if (!config) {
     return respostaErro(500, "O painel não está configurado neste ambiente.");
@@ -367,6 +371,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const nomeInformado = dados.get("corNome");
+    const nomeCor = nomeInformado === null ? null : z.string().trim().min(1).max(40).safeParse(nomeInformado);
+    if (nomeCor && !nomeCor.success) return respostaErro(400, "Informe a cor da peça, com até 40 caracteres.");
+
     const arquivoBruto = dados.get("arquivo");
     if (!(arquivoBruto instanceof File)) {
       return respostaErro(400, "Envie um arquivo de imagem (JPEG, PNG ou WebP).");
@@ -393,7 +401,7 @@ export async function POST(request: NextRequest) {
     //    DELA — o pedido não informa (nem precisa informar) a
     //    peça. Admin lê até rascunho pela política escrita_admin.
     const paramsCor = new URLSearchParams({
-      select: "id,produto_id,produtos(slug)",
+      select: "id,produto_id,nome,cor_hex,produtos(slug)",
       id: `eq.${corId}`,
       limit: "1",
     });
@@ -412,6 +420,40 @@ export async function POST(request: NextRequest) {
       );
     }
     const slugProduto = cores[0].produtos.slug;
+
+    if (nomeCor?.success && nomeCor.data !== cores[0].nome) {
+      const cor = cores[0];
+      const variacoes = validar("variacoes:consultar-cor", await chamar(config, token, "variacoes", {
+        method: "GET", params: new URLSearchParams({ select: "id,cor,cor_hex", produto_id: `eq.${cor.produto_id}`, cor_id: `eq.${corId}` }),
+      }), z.array(z.object({ id: z.uuid(), cor: z.string(), cor_hex: z.string() })));
+      const paramsGrupo = new URLSearchParams({ id: `eq.${corId}`, nome: `eq.${cor.nome}` });
+      const atualizadas = validar("produto_cores:renomear", await chamar(config, token, "produto_cores", {
+        method: "PATCH", params: paramsGrupo, representacao: true,
+        corpo: { nome: nomeCor.data, cor_hex: tomDaCor(nomeCor.data) },
+      }), z.array(z.object({ id: z.uuid() })));
+      if (!atualizadas.length) return respostaErro(409, "A cor foi alterada em outra tela. Recarregue antes de enviar a foto.");
+      try {
+        await chamar(config, token, "variacoes", {
+          method: "PATCH", params: new URLSearchParams({ produto_id: `eq.${cor.produto_id}`, cor_id: `eq.${corId}` }),
+          corpo: { cor: nomeCor.data, cor_hex: tomDaCor(nomeCor.data) },
+        });
+      } catch {
+        try {
+          for (const variacao of variacoes) {
+            await chamar(config, token, "variacoes", { method: "PATCH",
+              params: new URLSearchParams({ id: `eq.${variacao.id}`, produto_id: `eq.${cor.produto_id}` }),
+              corpo: { cor: variacao.cor, cor_hex: variacao.cor_hex } });
+          }
+          await chamar(config, token, "produto_cores", { method: "PATCH",
+            params: new URLSearchParams({ id: `eq.${corId}`, nome: `eq.${nomeCor.data}` }),
+            corpo: { nome: cor.nome, cor_hex: cor.cor_hex } });
+        } catch {
+          throw new ErroFoto(502, "Não foi possível sincronizar a cor. Confira o nome e o estoque na peça antes de continuar. Nenhuma foto foi enviada.");
+        }
+        throw new ErroFoto(502, "Não foi possível salvar a cor dos tamanhos. Nenhuma foto foi enviada. Recarregue e tente novamente.");
+      }
+      corAlterada = true;
+    }
 
     // 4. Ordem na galeria da cor: a última + 1 (zero se for a
     //    primeira foto da cor).
@@ -474,7 +516,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (erro) {
     if (erro instanceof ErroFoto) {
-      return respostaErro(erro.status, erro.mensagem);
+      return respostaErro(erro.status, erro.mensagem + (corAlterada ? " O nome da cor já foi salvo. Recarregue a página antes de tentar enviar a foto novamente." : ""));
     }
     // Log de servidor: só o tipo do erro — sem corpos, sem tokens.
     console.error("[fotos] erro inesperado", {

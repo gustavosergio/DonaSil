@@ -147,14 +147,7 @@ async function ConteudoProduto({ params }: PropsConteudo) {
           <div>
             <dt className="text-ink-soft">Cores</dt>
             <dd className="mt-1 flex gap-1.5">
-              {produto.cores.map((cor) => (
-                <span
-                  key={cor.nome}
-                  title={cor.nome}
-                  className="h-4 w-4 rounded-full border border-black/10"
-                  style={{ backgroundColor: cor.hex }}
-                />
-              ))}
+              {produto.cores.map((cor) => cor.nome).join(", ")}
             </dd>
           </div>
         </dl>
@@ -170,7 +163,6 @@ async function ConteudoProduto({ params }: PropsConteudo) {
             <tr>
               <Th>Tamanho</Th>
               <Th>Cor</Th>
-              <Th className="w-16">Amostra</Th>
               <Th className="text-right">Quantidade</Th>
             </tr>
           </thead>
@@ -179,13 +171,7 @@ async function ConteudoProduto({ params }: PropsConteudo) {
               <tr key={variacao.id}>
                 <Td className="font-medium">{variacao.tamanho}</Td>
                 <Td className="text-ink-soft">{variacao.cor}</Td>
-                <Td>
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-4 w-4 rounded-full border border-black/10"
-                    style={{ backgroundColor: variacao.corHex }}
-                  />
-                </Td>
+
                 <Td className="text-right">
                   <AjustarEstoque key={`${variacao.id}-${variacao.quantidade}`} id={variacao.id}
                     quantidade={variacao.quantidade} rotulo={`${variacao.tamanho} — ${variacao.cor}`} />
@@ -196,10 +182,10 @@ async function ConteudoProduto({ params }: PropsConteudo) {
         </Tabela>
       </section>
 
-      {/* Fotos por cor (envio e exclusão reais — etapa 3) */}
+      {/* Fotos da peça (envio e exclusão reais — etapa 3) */}
       <section aria-labelledby="fotos-produto" className="mt-8">
         <h2 id="fotos-produto" className="mb-3 font-display text-lg font-semibold text-ink">
-          Fotos por cor
+          Fotos da peça
         </h2>
         <FotosProduto cores={produto.coresPainel} />
       </section>

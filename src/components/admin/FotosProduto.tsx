@@ -64,6 +64,7 @@ function CorFotos({ cor }: { cor: CorPainel }) {
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [nomeCor, setNomeCor] = useState(cor.nome === "Única" ? "" : cor.nome);
 
   async function aoEscolher(evento: ChangeEvent<HTMLInputElement>) {
     const arquivo = evento.target.files?.[0];
@@ -74,6 +75,11 @@ function CorFotos({ cor }: { cor: CorPainel }) {
 
     setErro(null);
     setAviso(null);
+
+    if (!nomeCor.trim() || nomeCor.trim().length > 40) {
+      setErro("Informe a cor da peça, com até 40 caracteres, antes de escolher a foto.");
+      return;
+    }
 
     // Pré-conferência no navegador (o servidor refaz tudo).
     if (arquivo.size === 0) {
@@ -89,6 +95,7 @@ function CorFotos({ cor }: { cor: CorPainel }) {
     try {
       const dados = new FormData();
       dados.append("corId", cor.id);
+      dados.append("corNome", nomeCor.trim());
       dados.append("arquivo", arquivo);
 
       const resposta = await fetch("/api/admin/fotos", {
@@ -145,11 +152,6 @@ function CorFotos({ cor }: { cor: CorPainel }) {
     <div className="rounded-2xl border border-sand bg-ivory p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <span
-            aria-hidden="true"
-            className="h-5 w-5 rounded-full border border-black/10"
-            style={{ backgroundColor: cor.hex }}
-          />
           <p className="font-medium text-ink">{cor.nome}</p>
         </div>
         <p className="text-xs text-ink-soft">
@@ -208,6 +210,20 @@ function CorFotos({ cor }: { cor: CorPainel }) {
       )}
 
       <div className="mt-4">
+        <label htmlFor={`cor-foto-${cor.id}`} className="mb-1 block text-sm font-medium text-ink">
+          Cor da peça nestas fotos
+        </label>
+        <input
+          id={`cor-foto-${cor.id}`}
+          type="text"
+          value={nomeCor}
+          onChange={(evento) => setNomeCor(evento.target.value)}
+          placeholder="Ex.: vermelho"
+          maxLength={40}
+          disabled={ocupado}
+          className="mb-2 w-full rounded-xl border border-sand bg-ivory px-3.5 py-2.5 text-sm text-ink"
+        />
+        <p className="mb-3 text-xs text-ink-soft">Escreva a cor e envie a foto. O nome também identifica estas fotos e os tamanhos da peça na loja. Se for um objeto sem cor definida, escreva “Única”.</p>
         <input
           ref={entrada}
           type="file"

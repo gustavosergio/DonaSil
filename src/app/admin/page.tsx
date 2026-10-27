@@ -16,7 +16,6 @@ import { TituloSecao } from "@/components/admin/TituloSecao";
 import {
   IconeEngrenagem,
   IconeMarcador,
-  IconePaleta,
   IconeSacola,
   IconeTag,
 } from "@/components/admin/Icones";
@@ -127,12 +126,6 @@ const ATALHOS = [
     titulo: "Categorias",
     descricao: "Conferir os grupos do catálogo e editar nomes.",
     icone: IconeMarcador,
-  },
-  {
-    href: "/admin/cores",
-    titulo: "Cores e variações",
-    descricao: "Cores por peça, tamanhos e estoque.",
-    icone: IconePaleta,
   },
   {
     href: "/admin/pedidos",

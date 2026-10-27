@@ -25,7 +25,6 @@ import {
   IconeFechar,
   IconeMarcador,
   IconeMenu,
-  IconePaleta,
   IconeSacola,
   IconeTag,
 } from "./Icones";
@@ -40,7 +39,6 @@ const SECOES: Secao[] = [
   { href: "/admin", titulo: "Visão geral", icone: IconeCasa },
   { href: "/admin/produtos", titulo: "Produtos", icone: IconeTag },
   { href: "/admin/categorias", titulo: "Categorias", icone: IconeMarcador },
-  { href: "/admin/cores", titulo: "Cores e variações", icone: IconePaleta },
   { href: "/admin/pedidos", titulo: "Pedidos", icone: IconeSacola },
   { href: "/admin/configuracoes", titulo: "Configurações", icone: IconeEngrenagem },
 ];

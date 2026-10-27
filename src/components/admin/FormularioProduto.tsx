@@ -1,27 +1,7 @@
 "use client";
 
-// ============================================================
-// DONA SIL — PAINEL — FORMULÁRIO DE PRODUTO
-// ============================================================
-// Dois modos, uma aparência:
-//   * modo "novo" → GRAVAÇÃO REAL: envia o cadastro para
-//     POST /api/admin/produtos (Route Handler que valida a sessão
-//     httpOnly no servidor e grava produto + cores + variações
-//     no Supabase). A peça nasce em rascunho para completar as fotos.
-//   * modo "edicao" → GRAVAÇÃO REAL dos dados EDITÁVEIS: envia
-//     para PATCH /api/admin/produtos/[slug] (mesma validação de
-//     sessão + admin no servidor). Grava nome, preço, categoria,
-//     descrição, composição, cuidados, status (ativo/rascunho) e
-//     destaque. Cores, tamanhos e estoque ficam SOMENTE LEITURA
-//     (a migração das variações ainda não existe) e o slug da
-//     peça nunca muda — é a chave dos caminhos das fotos.
-//
-// Cores (modo novo): sugestões reais da loja + cor livre (nome +
-// tom #rrggbb). Tamanhos: sugestões reais + tamanho livre, cada um
-// com estoque. A quantidade vale para todas as cores (decisão de
-// MVP combinada com a administradora) — cada cor × tamanho vira
-// uma variação no banco.
-// ============================================================
+// Cadastro em rascunho com tamanhos e estoque. A cor é informada
+// junto ao envio das fotos, sem escolher tons ou códigos.
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
@@ -54,9 +34,6 @@ export type ValoresProduto = {
   destaque: boolean;
 };
 
-/** Cor escolhida no cadastro (nome livre + tom). */
-type CorEscolhida = { nome: string; hex: string };
-
 /** Tamanho escolhido no cadastro + estoque inicial. */
 type TamanhoEscolhido = { tamanho: string; quantidade: number };
 
@@ -72,10 +49,8 @@ export function FormularioProduto({
   modo,
   slug,
   categorias,
-  coresDisponiveis,
   tamanhosDisponiveis,
   valoresIniciais,
-  coresAtuais = [],
   tamanhosAtuais = [],
 }: {
   modo: "novo" | "edicao";
@@ -112,12 +87,8 @@ export function FormularioProduto({
   );
 
   // Estado exclusivo do modo "novo" (cadastro real).
-  const [cores, setCores] = useState<CorEscolhida[]>([]);
   const [tamanhos, setTamanhos] = useState<TamanhoEscolhido[]>([]);
-  const [novaCorNome, setNovaCorNome] = useState("");
-  const [novaCorHex, setNovaCorHex] = useState("#b08d57");
   const [novoTamanho, setNovoTamanho] = useState("");
-  const [erroCores, setErroCores] = useState<string | null>(null);
   const [erroTamanhos, setErroTamanhos] = useState<string | null>(null);
 
   function atualizar<K extends keyof ValoresProduto>(campo: K, valor: ValoresProduto[K]) {
@@ -131,46 +102,9 @@ export function FormularioProduto({
   // Modo NOVO — cores e tamanhos com estoque (cadastro real)
   // ----------------------------------------------------------
 
-  function jaTemCor(nome: string): boolean {
-    const alvo = nome.trim().toLowerCase();
-    return cores.some((cor) => cor.nome.trim().toLowerCase() === alvo);
-  }
-
   function jaTemTamanho(tamanho: string): boolean {
     const alvo = tamanho.trim().toLowerCase();
     return tamanhos.some((item) => item.tamanho.trim().toLowerCase() === alvo);
-  }
-
-  /** Sugestão real da loja: clique adiciona, clique de novo remove. */
-  function alternarCorSugestao(cor: CorPeca) {
-    setErroCores(null);
-    setErroEnvio(null);
-    setCores((atuais) =>
-      jaTemCor(cor.nome)
-        ? atuais.filter((item) => item.nome !== cor.nome)
-        : [...atuais, { nome: cor.nome, hex: cor.hex }],
-    );
-  }
-
-  function adicionarCorPersonalizada() {
-    const nome = novaCorNome.trim();
-    if (!nome) {
-      setErroCores("Escreva o nome da cor (ex.: Off-white).");
-      return;
-    }
-    if (jaTemCor(nome)) {
-      setErroCores("Esta cor já está na lista.");
-      return;
-    }
-    setErroCores(null);
-    setErroEnvio(null);
-    setCores((atuais) => [...atuais, { nome, hex: novaCorHex.toLowerCase() }]);
-    setNovaCorNome("");
-  }
-
-  function removerCor(nome: string) {
-    setErroCores(null);
-    setCores((atuais) => atuais.filter((cor) => cor.nome !== nome));
   }
 
   function alternarTamanhoSugestao(tamanho: string) {
@@ -326,9 +260,7 @@ export function FormularioProduto({
     if (!valores.categoriaSlug) {
       novosErros.categoriaSlug = "Escolha uma categoria.";
     }
-    if (cores.length === 0) {
-      novosErros.cores = "Escolha ao menos uma cor da peça.";
-    }
+
     if (tamanhos.length === 0) {
       novosErros.tamanhos = "Escolha ao menos um tamanho com estoque.";
     }
@@ -351,7 +283,7 @@ export function FormularioProduto({
           composicao: valores.composicao.trim(),
           cuidados: valores.cuidados.trim(),
           destaque: valores.destaque,
-          cores: cores.map((cor) => ({ nome: cor.nome, hex: cor.hex })),
+          cores: [{ nome: "Única", hex: "#808080" }],
           tamanhos: tamanhos.map((item) => ({
             tamanho: item.tamanho,
             quantidade: item.quantidade,
@@ -401,7 +333,7 @@ export function FormularioProduto({
           Nome, preço, categoria, descrição, composição, cuidados, status e
           destaque são gravados de verdade ao clicar em “Salvar alterações”.
           Ajuste as quantidades na seção “Estoque por variação”, acima.
-          As cores e os tamanhos existentes são somente leitura. O endereço
+          Informe a cor junto ao envio das fotos. O endereço
           da peça permanece o mesmo para preservar seus links e fotos.
         </Aviso>
       ) : (
@@ -458,7 +390,6 @@ export function FormularioProduto({
             const categoria = evento.target.value;
             atualizar("categoriaSlug", categoria);
             if (categoria === "desapego" && modo === "novo") {
-              setCores(atuais => atuais.length ? atuais : [{ nome: "Única", hex: "#8d9d8b" }]);
               setTamanhos(atuais => atuais.length ? atuais : [{ tamanho: "Único", quantidade: 1 }]);
             }
           }}
@@ -497,7 +428,7 @@ export function FormularioProduto({
         onChange={(evento) => atualizar("descricao", evento.target.value)}
         placeholder={valores.categoriaSlug === "desapego" ? "Informe estado de conservação, marcas de uso, medidas, voltagem (quando houver), acessórios incluídos e condições de retirada…" : "Conte para a cliente o que torna esta peça especial…"}
       />
-      {valores.categoriaSlug === "desapego" && <p className="rounded-xl bg-champagne p-4 text-sm leading-7 text-ink-soft">Este anúncio aparece somente no Desapego. Preencha os detalhes de uso e medidas na descrição. Para um objeto único, use a cor “Única”, tamanho “Único” e estoque 1. A compra e o transporte são combinados pelo WhatsApp. Após salvar, adicione as fotos reais na edição do produto.</p>}
+      {valores.categoriaSlug === "desapego" && <p className="rounded-xl bg-champagne p-4 text-sm leading-7 text-ink-soft">Este anúncio aparece somente no Desapego. Preencha os detalhes de uso e medidas na descrição. Para um objeto único, use tamanho “Único” e estoque 1. A compra e o transporte são combinados pelo WhatsApp. Após salvar, adicione as fotos reais na edição do produto.</p>}
 
       <div className="grid gap-5 sm:grid-cols-2">
         <CampoTexto
@@ -515,158 +446,6 @@ export function FormularioProduto({
           placeholder="Ex.: Lavar à mão, secar à sombra"
         />
       </div>
-
-      {modo === "edicao" ? (
-        /* Cores da EDIÇÃO — SOMENTE LEITURA: são as cores reais
-           que a peça tem hoje (leitura administrativa). A edição
-           de cores/variações chega com a migração (M2/M3) — nada
-           aqui é gravado nesta etapa. */
-        <fieldset>
-          <legend className="text-sm font-medium text-ink">
-            Cores (somente leitura)
-          </legend>
-          <p className="mt-1 text-xs leading-5 text-ink-soft">
-            Estas são as cores reais da peça. A edição de cores, tamanhos e
-            estoque chega com a migração das variações — nada aqui é gravado
-            nesta etapa.
-          </p>
-          {coresAtuais.length > 0 ? (
-            <div className="mt-2.5 flex flex-wrap gap-2">
-              {coresAtuais.map((cor) => (
-                <span
-                  key={cor.nome}
-                  className="inline-flex items-center gap-2 rounded-full border border-gold bg-champagne px-4 py-2 text-sm font-medium text-gold-ink"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="h-3.5 w-3.5 rounded-full border border-black/10"
-                    style={{ backgroundColor: cor.hex }}
-                  />
-                  {cor.nome}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-2.5 text-sm text-ink-soft">
-              Esta peça não tem cores cadastradas nas variações.
-            </p>
-          )}
-        </fieldset>
-      ) : (
-        /* Cores do CADASTRO — sugestões + cor livre (nome + tom). */
-        <fieldset>
-          <legend className="text-sm font-medium text-ink">Cores</legend>
-          <p className="mt-1 text-xs leading-5 text-ink-soft">
-            Escolha cores da lista ou crie uma nova com o nome e o tom. Cada
-            cor ganha as fotos dela na próxima etapa (armazenamento).
-          </p>
-          {coresDisponiveis.length > 0 && (
-            <div className="mt-2.5 flex flex-wrap gap-2">
-              {coresDisponiveis.map((cor) => {
-                const marcada = jaTemCor(cor.nome);
-                return (
-                  <button
-                    key={cor.nome}
-                    type="button"
-                    aria-pressed={marcada}
-                    aria-label={`${marcada ? "Remover" : "Adicionar"} cor ${cor.nome}`}
-                    onClick={() => alternarCorSugestao(cor)}
-                    className={
-                      marcada
-                        ? "inline-flex items-center gap-2 rounded-full border border-gold bg-champagne px-4 py-2 text-sm font-medium text-gold-ink transition hover:border-gold-deep"
-                        : "inline-flex items-center gap-2 rounded-full border border-sand bg-ivory px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
-                    }
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="h-3.5 w-3.5 rounded-full border border-black/10"
-                      style={{ backgroundColor: cor.hex }}
-                    />
-                    {cor.nome}
-                    {marcada && <IconeCheck className="h-3.5 w-3.5" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          <div className="mt-3 flex flex-wrap items-end gap-3">
-            <CampoTexto
-              id="nova-cor-nome"
-              rotulo="Nova cor (nome)"
-              className="w-44"
-              value={novaCorNome}
-              onChange={(evento) => setNovaCorNome(evento.target.value)}
-              placeholder="Ex.: Off-white"
-            />
-            <div className="w-24">
-              <label
-                htmlFor="nova-cor-tom"
-                className="mb-1.5 block text-sm font-medium text-ink"
-              >
-                Tom
-              </label>
-              <input
-                id="nova-cor-tom"
-                type="color"
-                value={novaCorHex}
-                onChange={(evento) => setNovaCorHex(evento.target.value)}
-                className="h-11 w-full cursor-pointer rounded-xl border border-sand bg-ivory p-1"
-                aria-label="Tom da nova cor"
-              />
-            </div>
-            <Botao
-              type="button"
-              variante="secundario"
-              onClick={adicionarCorPersonalizada}
-            >
-              <IconeMais className="h-4 w-4" />
-              Adicionar cor
-            </Botao>
-          </div>
-          {erroCores && (
-            <p role="alert" className="mt-1.5 text-xs text-[#a04b32]">
-              {erroCores}
-            </p>
-          )}
-          {erros.cores && (
-            <p role="alert" className="mt-1.5 text-xs text-[#a04b32]">
-              {erros.cores}
-            </p>
-          )}
-
-          {cores.length > 0 && (
-            <ul className="mt-3 space-y-2">
-              {cores.map((cor) => (
-                <li
-                  key={cor.nome}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-sand bg-ivory px-3.5 py-2.5"
-                >
-                  <span className="flex items-center gap-2.5 text-sm text-ink">
-                    <span
-                      aria-hidden="true"
-                      className="h-4 w-4 rounded-full border border-black/10"
-                      style={{ backgroundColor: cor.hex }}
-                    />
-                    {cor.nome}
-                    <span className="font-mono text-xs uppercase text-ink-soft">
-                      {cor.hex}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removerCor(cor.nome)}
-                    aria-label={`Remover cor ${cor.nome}`}
-                    className="rounded-full p-1.5 text-ink-soft transition hover:bg-sand hover:text-ink"
-                  >
-                    <IconeFechar className="h-4 w-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </fieldset>
-      )}
 
       {modo === "edicao" ? (
         /* Tamanhos da EDIÇÃO — SOMENTE LEITURA: os tamanhos reais
@@ -706,7 +485,7 @@ export function FormularioProduto({
           </legend>
           <p className="mt-1 text-xs leading-5 text-ink-soft">
             Escolha os tamanhos e o estoque inicial de cada um. A quantidade
-            vale para todas as cores escolhidas — cada cor × tamanho vira uma
+            é o estoque inicial da peça — cada tamanho vira uma
             variação no estoque da loja.
           </p>
           {tamanhosDisponiveis.length > 0 && (
@@ -817,11 +596,11 @@ export function FormularioProduto({
       />
 
       {/* Fotos: já existem — o upload, a visualização e a exclusão
-          acontecem na seção "Fotos por cor" desta mesma página. */}
+          acontecem na seção "Fotos da peça" desta mesma página. */}
       <div>
         <p className="mb-1.5 block text-sm font-medium text-ink">Fotos da peça</p>
         <div className="rounded-xl border border-dashed border-sand bg-ivory px-4 py-8 text-center text-sm leading-6 text-ink-soft">
-          As fotos são enviadas, vistas e excluídas na seção “Fotos por cor”
+          As fotos são enviadas, vistas e excluídas na seção “Fotos da peça”
           desta mesma página — nada aqui é gravado pelo formulário.
         </div>
       </div>

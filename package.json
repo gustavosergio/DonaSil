@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "node tests/regras.cjs && node tests/catalogo.cjs && node tests/estoque.cjs && node tests/painel-auth.cjs && node tests/produtos.cjs && node tests/edicao-produtos.cjs",
+    "test": "node tests/regras.cjs && node tests/catalogo.cjs && node tests/estoque.cjs && node tests/painel-auth.cjs && node tests/produtos.cjs && node tests/edicao-produtos.cjs && node tests/fotos.cjs",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report",
     "dev": "next dev",

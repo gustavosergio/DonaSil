@@ -393,3 +393,27 @@ test("menu e tema funcionam e não há rolagem horizontal", async ({ page }, tes
   expect(await page.locator('html').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('tema-escuro.png'), fullPage: true });
 });
+
+
+test("painel informa cor por texto ao enviar foto sem seletor de tons", async ({ page }) => {
+  await page.goto('/admin/login?proximo=/admin/produtos/vestido-floral');
+  await page.getByLabel('E-mail', { exact: true }).fill('admin@example.invalid');
+  await page.getByLabel('Senha', { exact: true }).fill('senha-ficticia-e2e');
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/produtos\/vestido-floral/);
+  await expect(page.getByRole('link', { name: 'Cores e variações', exact: true })).toHaveCount(0);
+  await expect(page.locator('input[type=color]')).toHaveCount(0);
+  await page.getByLabel('Cor da peça nestas fotos', { exact: true }).fill('vermelho');
+  await page.route('**/api/admin/fotos', async route => {
+    const corpo = route.request().postDataBuffer()!.toString();
+    expect(corpo).toContain('name="corNome"');
+    expect(corpo).toContain('vermelho');
+    await route.fulfill({ status: 201, json: { ok: true } });
+  });
+  await page.locator('input[type=file]').setInputFiles({ name: 'vermelho.jpg', mimeType: 'image/jpeg', buffer: Buffer.from([255,216,255,0]) });
+  await expect(page.getByRole('status').filter({ hasText: 'Foto enviada.' })).toBeVisible();
+  await page.screenshot({ path: 'test-results/cor-texto-' + (await page.viewportSize())!.width + '.png', fullPage: true });
+  await page.goto('/admin/produtos/novo');
+  await expect(page.locator('input[type=color]')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Adicionar cor', exact: true })).toHaveCount(0);
+});

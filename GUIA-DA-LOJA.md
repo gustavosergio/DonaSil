@@ -19,6 +19,8 @@
 
 Cadastre somente objetos e roupas reais, com fotos próprias e descrição correta. O cadastro novo começa como rascunho. Complete as fotos e depois selecione **Ativo** e salve. A ativação é bloqueada enquanto faltar descrição ou foto.
 
+Não é necessário cadastrar tons ou códigos de cor. Na edição, abra **Fotos da peça**, escreva a cor (por exemplo, “vermelho”) e clique em **Enviar foto**. O nome é salvo com o envio e identifica o conjunto de fotos e os tamanhos correspondentes. Ao corrigir uma cor existente, a alteração vale para todas as fotos daquele conjunto; as quantidades de estoque são preservadas. Em objetos sem uma cor definida, use “Única”.
+
 Os produtos de demonstração estão desativados. Para retirar um anúncio da vitrine sem perder as informações, altere seu status para **Rascunho**.
 
 ## Desapego
