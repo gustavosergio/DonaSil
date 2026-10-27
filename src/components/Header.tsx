@@ -73,6 +73,7 @@ export default function Header() {
           <Link href="/desapego" className="text-ink-soft transition hover:text-gold-ink">Desapego</Link>
           <LinkSacola />
           <AlternarTema />
+          <Link href="/sobre-nos" className="whitespace-nowrap text-ink-soft transition hover:text-gold-ink">Sobre nós</Link>
         </nav>
 
         {/* Celular e tablet estreito (<768px): tema e menu na mesma extremidade da
@@ -81,6 +82,7 @@ export default function Header() {
             na navegação e o menu vira hambúrguer escondido. */}
         <div className="flex items-center gap-1 md:hidden">
           <AlternarTema />
+          <Link href="/sobre-nos" onClick={() => setMenuAberto(false)} className="whitespace-nowrap px-2 py-3 text-sm font-medium text-ink-soft transition hover:text-gold-ink">Sobre nós</Link>
           <button
             type="button"
             className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition hover:bg-champagne"
