@@ -294,6 +294,25 @@ test("servidor recusa cobrar frete de roupas para objetos de desapego", async ({
   await expect(page.getByRole('link', { name: 'Enviar pedido no WhatsApp' })).toHaveCount(0);
 });
 
+test("WhatsApp flutuante está em todas as páginas sem botão no menu", async ({ page }) => {
+  for (const rota of ['/', '/catalogo', '/catalogo/vestido-floral', '/sacola', '/finalizar', '/desapego', '/desapego/quadro-teste', '/pagina-inexistente', '/admin/login']) {
+    await page.goto(rota);
+    const flutuante = page.getByRole('link', { name: 'Falar com a Dona Sil pelo WhatsApp', exact: true });
+    await expect(flutuante).toHaveCount(1);
+    await expect(flutuante).toBeVisible();
+    await expect(flutuante).toHaveCSS('position', 'fixed');
+    await expect(page.getByRole('banner').getByRole('link', { name: 'WhatsApp', exact: true })).toHaveCount(0);
+  }
+  await page.getByLabel('E-mail', { exact: true }).fill('admin@example.invalid');
+  await page.getByLabel('Senha', { exact: true }).fill('senha-ficticia-e2e');
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  for (const rota of ['/admin', '/admin/produtos', '/admin/pagina-inexistente']) {
+    await page.goto(rota);
+    await expect(page.getByRole('link', { name: 'Falar com a Dona Sil pelo WhatsApp', exact: true })).toBeVisible();
+  }
+});
+
 test("menu e tema funcionam e não há rolagem horizontal", async ({ page }, testInfo) => {
   await page.goto('/');
   if (testInfo.project.name === 'celular') {

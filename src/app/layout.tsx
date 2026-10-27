@@ -60,8 +60,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* A sacola vive no navegador (localStorage) e precisa
             envolver também o cabeçalho (badge de unidades). */}
         <CarrinhoProvider>
-          {/* O painel /admin tem navegação própria: o cabeçalho, o
-              rodapé e o botão flutuante da loja ficam ocultos lá.
+          {/* O painel /admin tem navegação própria: o cabeçalho e o
+              rodapé da loja ficam ocultos lá.
               O componente lê a rota atual, então vai dentro de um
               Suspense (exigência do casca estático do Next 16). */}
           <Suspense fallback={null}>
@@ -73,10 +73,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Suspense fallback={null}>
             <MostrarForaDoPainel>
               <Footer />
-              <WhatsAppFloat />
             </MostrarForaDoPainel>
           </Suspense>
         </CarrinhoProvider>
+        <WhatsAppFloat />
       </body>
     </html>
   );

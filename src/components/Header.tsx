@@ -2,12 +2,8 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { linkWhatsApp } from "@/lib/whatsapp";
 import { useSacola } from "@/components/CarrinhoProvider";
 import AlternarTema from "@/components/AlternarTema";
-
-const MENSAGEM_ATENDIMENTO =
-  "Olá! Vim pelo site da Dona Sil e gostaria de saber mais sobre as peças.";
 
 function LinkSacola({ aoNavegar }: { aoNavegar?: () => void }) {
   const { carregado, unidades } = useSacola();
@@ -77,14 +73,6 @@ export default function Header() {
           <Link href="/desapego" className="text-ink-soft transition hover:text-gold-ink">Desapego</Link>
           <LinkSacola />
           <AlternarTema />
-          <a
-            href={linkWhatsApp(MENSAGEM_ATENDIMENTO)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full bg-[#15803d] px-5 py-2 text-white transition hover:bg-[#166534] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#15803d]"
-          >
-            WhatsApp
-          </a>
         </nav>
 
         {/* Celular e tablet estreito (<768px): tema e menu na mesma extremidade da
@@ -149,16 +137,6 @@ export default function Header() {
               <div className="rounded-lg px-3 py-3 transition hover:bg-champagne">
                 <LinkSacola aoNavegar={() => setMenuAberto(false)} />
               </div>
-            </li>
-            <li className="mt-2">
-              <a
-                href={linkWhatsApp(MENSAGEM_ATENDIMENTO)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block rounded-full bg-[#15803d] px-5 py-3 text-center text-white transition hover:bg-[#166534] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#15803d]"
-              >
-                Falar no WhatsApp
-              </a>
             </li>
           </ul>
         </nav>

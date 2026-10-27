@@ -7,9 +7,9 @@ import CascaPainel from "@/components/admin/CascaPainel";
 // DONA SIL — PAINEL ADMIN — LAYOUT
 // ============================================================
 // Envolve todas as rotas /admin com o menu lateral e a barra
-// superior. O cabeçalho, o rodapé e o botão flutuante do site
+// superior. O cabeçalho e o rodapé do site
 // público ficam ocultos aqui (ver MostrarForaDoPainel no layout
-// raiz).
+// raiz). O WhatsApp flutuante permanece disponível no layout raiz.
 //
 // O menu (NavPainel) lê a rota atual no navegador e por isso
 // fica dentro de um Suspense — exigência do modo de cache do

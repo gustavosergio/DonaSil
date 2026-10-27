@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 /**
- * Esconde o cabeçalho, o rodapé e o botão flutuante do site público
+ * Esconde o cabeçalho e o rodapé do site público
  * quando a rota atual é do painel administrativo (/admin).
  *
  * O painel tem a própria navegação; o "chrome" público da loja não
