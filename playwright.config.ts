@@ -29,6 +29,7 @@ export default defineConfig({
         NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:4010",
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "chave-ficticia-e2e",
         SUPABASE_SECRET_KEY: "",
+        CEP_API_URL: "http://127.0.0.1:4010/ws",
       },
     },
   ],

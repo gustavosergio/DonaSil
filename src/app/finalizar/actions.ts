@@ -21,6 +21,8 @@
 // ============================================================
 
 import { CatalogoErro, obterProduto } from "@/lib/catalogo";
+import { consultarEnderecoServidor } from "@/lib/endereco-servidor";
+import { cotarCorreios, CotacaoErro, type OpcaoCorreios } from "@/lib/melhor-envio";
 import {
   FreteErro,
   calcularFreteAplicado,
@@ -29,6 +31,8 @@ import {
   paraCentavos,
   regiaoCompativelComUf,
   retiradaNoLocal,
+  FAIXA_COTACAO,
+  LIMITE_FRETE_GRATIS_CENTAVOS,
 } from "@/lib/frete";
 import { linkWhatsApp } from "@/lib/whatsapp";
 import {
@@ -97,6 +101,7 @@ export async function prepararPedido(
     whatsapp: String(formData.get("whatsapp") ?? ""),
     cep: String(formData.get("cep") ?? ""),
     endereco: String(formData.get("endereco") ?? ""),
+    numero: String(formData.get("numero") ?? ""),
     complemento: String(formData.get("complemento") ?? ""),
     bairro: String(formData.get("bairro") ?? ""),
     cidade: String(formData.get("cidade") ?? ""),
@@ -224,6 +229,27 @@ export async function prepararPedido(
     };
   }
 
+  if (!retiradaNoLocal(faixa.nome)) {
+    const consulta = await consultarEnderecoServidor(entrega.data.cep);
+    if (!consulta.ok) return { ok: false, errosCampos: { cep: "Não foi possível confirmar este CEP. Confira e tente novamente." } };
+    const campos = consulta.dados;
+    if (!campos.endereco || !campos.bairro || !campos.cidade) return {
+      ok: false, errosCampos: { cep: "Este CEP não informa o endereço completo. Use o CEP da rua ou fale com a loja para combinar a entrega." },
+    };
+    for (const campo of ["endereco", "bairro", "cidade", "uf"] as const) {
+      if (entrega.data[campo] !== campos[campo]) return { ok: false, errosCampos: {
+        cep: "O endereço informado não corresponde ao CEP. Digite o CEP novamente para atualizar os campos.",
+      } };
+    }
+    if ((faixa.nome === "Recife — Zona Norte" || faixa.nome === "Recife — Zona Sul") &&
+        (campos.cidade.toLocaleLowerCase("pt-BR") !== "recife" || campos.uf !== "PE")) {
+      return { ok: false, errosCampos: { faixaFreteId: "A tarifa de Recife só pode ser usada para endereços de Recife." } };
+    }
+    if (faixa.nome === FAIXA_COTACAO && campos.cidade.toLocaleLowerCase("pt-BR") === "recife" && campos.uf === "PE") {
+      return { ok: false, errosCampos: { faixaFreteId: "Para Recife, escolha Zona Norte, Zona Sul ou retirada." } };
+    }
+  }
+
   // ---------------------------------------------------------
   // 5) Resumo com valores reais + link do WhatsApp OFICIAL.
   //    Nenhum pedido é registrado nesta etapa.
@@ -239,12 +265,26 @@ export async function prepararPedido(
   const subtotal = subtotalCentavos / 100;
   const acrescimoCentavos = acrescimoPagamento(subtotalCentavos, pagamento.data);
   const freteAplicado = calcularFreteAplicado(subtotalCentavos, faixa);
+  let nomeFrete = faixa.nome;
+  if (faixa.nome === FAIXA_COTACAO && subtotalCentavos <= LIMITE_FRETE_GRATIS_CENTAVOS) {
+    try {
+      const opcoes = await cotarCorreios(entrega.data.cep, itensResumo);
+      const opcao = opcoes.find(o => o.id === formData.get("servicoFrete"));
+      if (!opcao || paraCentavos(Number(formData.get("freteCotado"))) !== paraCentavos(opcao.valor)) {
+        return { ok: false, errosCampos: { faixaFreteId: "Calcule o frete novamente e selecione uma opção disponível." } };
+      }
+      freteAplicado.valor = opcao.valor;
+      nomeFrete = `${opcao.nome} — prazo estimado de ${opcao.prazo} dias úteis`;
+    } catch (erro) {
+      return { ok: false, errosCampos: { faixaFreteId: erro instanceof CotacaoErro ? erro.message : "Não foi possível calcular o frete agora." } };
+    }
+  }
   const resumo: ResumoPedido = {
     itens: itensResumo,
     subtotal,
     formaPagamento: pagamento.data,
     acrescimoCartao: acrescimoCentavos / 100,
-    frete: { id: faixa.id, nome: faixa.nome, valor: freteAplicado.valor },
+    frete: { id: faixa.id, nome: nomeFrete, valor: freteAplicado.valor },
     retirada: retiradaNoLocal(faixa.nome),
     total: (subtotalCentavos + acrescimoCentavos + paraCentavos(freteAplicado.valor)) / 100,
     entrega: entrega.data,
@@ -257,4 +297,27 @@ export async function prepararPedido(
     resumo,
     urlWhatsApp: linkWhatsApp(resumo.mensagemWhatsApp),
   };
+}
+
+export async function cotarFretePedido(dados: FormData): Promise<{ ok: true; opcoes: OpcaoCorreios[] } | { ok: false; mensagem: string }> {
+  try {
+    const cep = String(dados.get("cep") ?? "");
+    const endereco = await consultarEnderecoServidor(cep);
+    if (!endereco.ok || !endereco.dados.cidade) return { ok: false, mensagem: "Confirme um CEP válido antes de calcular o frete." };
+    if (endereco.dados.cidade.toLocaleLowerCase("pt-BR") === "recife" && endereco.dados.uf === "PE") return { ok: false, mensagem: "Para Recife, escolha Zona Norte, Zona Sul ou retirada." };
+    const linhas = linhasSubmetidasSchema.parse(JSON.parse(String(dados.get("itens") ?? "[]")));
+    const itens: ItemResumo[] = [];
+    for (const linha of agruparPorVariacao(linhas)) {
+      const produto = await obterProduto(linha.produtoSlug);
+      const variacao = produto?.variacoes.find(v => v.id === linha.variacaoId);
+      if (!produto || produto.categoriaSlug === "desapego" || !variacao || variacao.quantidade < linha.quantidade) return { ok: false, mensagem: "Confira as peças e o estoque na sacola antes de calcular o frete." };
+      itens.push({ variacaoId: variacao.id, produtoSlug: produto.slug, produtoNome: produto.nome,
+        tamanho: variacao.tamanho, cor: variacao.cor, quantidade: linha.quantidade, precoUnitario: produto.preco });
+    }
+    if (!itens.length) return { ok: false, mensagem: "A sacola está vazia." };
+    if (itens.reduce((s,i) => s + paraCentavos(i.precoUnitario) * i.quantidade, 0) > LIMITE_FRETE_GRATIS_CENTAVOS) return { ok: true, opcoes: [{ id: "gratis", nome: "Entrega — frete grátis", valor: 0, prazo: 0 }] };
+    return { ok: true, opcoes: await cotarCorreios(cep, itens) };
+  } catch (erro) {
+    return { ok: false, mensagem: erro instanceof CotacaoErro ? erro.message : "Não foi possível calcular o frete. Confira o CEP e tente novamente." };
+  }
 }

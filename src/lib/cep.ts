@@ -4,9 +4,9 @@
 // Autopreenchimento do endereço no checkout. Regras da casa:
 //   * JSON externo NUNCA é confiado: a resposta é validada com
 //     Zod antes de virar estado do formulário.
-//   * A consulta é MELHORIA PROGRESSIVA: qualquer falha vira um
-//     aviso na tela e a cliente preenche manualmente. Nada aqui
-//     bloqueia o envio do pedido.
+//   * Falhas são mostradas na tela. O endereço da entrega deve
+//     ser confirmado pelo CEP; não há edição manual dos campos
+//     retornados. Rua e número ficam separados.
 //   * Somente o CEP (dado público) é enviado à API. Sem chave,
 //     sem token, sem variável de ambiente.
 //   * A validação REAL continua no servidor (src/lib/pedido.ts +

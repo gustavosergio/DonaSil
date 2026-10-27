@@ -63,9 +63,9 @@ async function main() {
       await page.getByLabel('Nome completo').fill('Cliente de Verificação');
       await page.getByLabel('WhatsApp (com DDD)').fill('81999998888');
       await page.getByLabel('CEP', { exact: true }).fill('52000000');
-      await page.getByLabel('Cidade', { exact: true }).fill('Recife');
-      await page.getByLabel('Endereço (rua e número)').fill('Rua de Teste, 123');
-      await page.getByLabel('UF', { exact: true }).fill('PE');
+      await page.getByLabel('Cidade', { exact: true }).waitFor();
+      await page.getByLabel('Número', { exact: true }).fill('123');
+      await page.getByLabel('UF', { exact: true }).waitFor();
       await page.getByRole('radio', { name: /Retirada no local/ }).check();
       await page.getByRole('button', { name: 'Conferir e continuar', exact: true }).click();
       const enviar = page.getByRole('link', { name: 'Enviar pedido no WhatsApp', exact: true });

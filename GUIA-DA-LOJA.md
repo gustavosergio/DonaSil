@@ -30,3 +30,9 @@ Escolha a categoria **Desapego**, informe estado de conservação, marcas de uso
 ## Pedidos no painel
 
 As solicitações do WhatsApp não são registradas automaticamente na lista de pedidos. Essa lista mostra somente registros que já existam no banco. Não use uma lista vazia como indicação de que não houve contatos ou vendas.
+
+## Frete e endereço
+
+Recife Zona Norte: R$ 14,99; Zona Sul: R$ 21,99. Retirada grátis. Pedidos acima de R$ 129,99 em produtos mantêm frete grátis. A integração Melhor Envio para outras cidades depende da conexão da conta e das medidas reais; consulte [MELHOR-ENVIO.md](MELHOR-ENVIO.md).
+
+No checkout, informe o CEP e o número em campos separados. Rua, bairro, cidade e UF são confirmados pelo CEP e ficam bloqueados. Para corrigir o endereço, troque o CEP.

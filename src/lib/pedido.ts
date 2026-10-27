@@ -336,6 +336,7 @@ export const dadosEntregaSchema = z.object({
     .trim()
     .min(1, "Informe o endereço de entrega.")
     .max(300, "O endereço é muito longo (máximo 300 letras)."),
+  numero: z.string().trim().min(1, "Informe o número do imóvel (ou S/N).").max(20, "O número é muito longo."),
   complemento: z
     .string()
     .trim()
@@ -541,7 +542,7 @@ export function montarMensagemWhatsApp(resumo: ResumoPedido): string {
     linhas.push("Retirada no local — endereço a combinar");
   } else {
     const endereco = [
-      resumo.entrega.endereco,
+      [resumo.entrega.endereco, resumo.entrega.numero].filter(Boolean).join(", "),
       resumo.entrega.complemento,
       resumo.entrega.bairro,
     ]
@@ -578,7 +579,7 @@ export function paraPayloadBanco(resumo: ResumoPedido) {
       nome: resumo.entrega.nome,
       whatsapp: resumo.entrega.whatsapp,
       cep: resumo.entrega.cep,
-      endereco: resumo.entrega.endereco,
+      endereco: [resumo.entrega.endereco, resumo.entrega.numero].filter(Boolean).join(", "),
       complemento: resumo.entrega.complemento,
       bairro: resumo.entrega.bairro,
       cidade: resumo.entrega.cidade,

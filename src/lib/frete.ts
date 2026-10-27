@@ -131,11 +131,16 @@ export const listarFaixasFrete = cache(async (): Promise<FaixaFrete[]> => {
 
   // Lista vazia aqui é resultado REAL do banco (nenhuma faixa
   // ativa cadastrada) — caso legítimo, distinto de falha.
-  return resultado.data.map((faixa) => ({
+  const faixas = resultado.data.map((faixa) => ({
     id: faixa.id,
     nome: faixa.nome,
     valor: faixa.valor,
   }));
+  if (!faixas.length) return [];
+  return [
+    ...faixas.filter(f => [FAIXA_ZONA_NORTE, FAIXA_ZONA_SUL, FAIXA_RETIRADA_NO_LOCAL].includes(f.nome)),
+    { id: FAIXA_COTACAO_ID, nome: FAIXA_COTACAO, valor: 0 },
+  ];
 });
 
 // ------------------------------------------------------------
@@ -153,6 +158,8 @@ export const listarFaixasFrete = cache(async (): Promise<FaixaFrete[]> => {
 // ------------------------------------------------------------
 
 export const FAIXA_ZONA_NORTE = "Recife — Zona Norte";
+export const FAIXA_COTACAO = "Outras cidades — calcular frete";
+export const FAIXA_COTACAO_ID = "00000000-0000-4000-8000-000000000099";
 export const FAIXA_ZONA_SUL = "Recife — Zona Sul";
 export const FAIXA_RMR = "Região Metropolitana do Recife";
 export const FAIXA_INTERIOR_PE = "Interior de Pernambuco";
@@ -161,6 +168,7 @@ export const FAIXA_RETIRADA_NO_LOCAL =
   "Retirada no local — endereço combinado pelo WhatsApp";
 
 const FAIXAS_CONHECIDAS: ReadonlySet<string> = new Set([
+  FAIXA_COTACAO,
   FAIXA_ZONA_NORTE,
   FAIXA_ZONA_SUL,
   FAIXA_RMR,
@@ -222,6 +230,7 @@ export function faixaConhecida(nome: string): boolean {
 export function regiaoCompativelComUf(nome: string, uf: string): boolean {
   if (!faixaConhecida(nome)) return false;
   const ufNormalizada = uf.trim().toUpperCase();
+  if (nome === FAIXA_COTACAO) return true;
   if (nome === FAIXA_RETIRADA_NO_LOCAL) return true;
   if (nome === FAIXA_OUTROS_ESTADOS) return ufNormalizada !== "PE";
   return ufNormalizada === "PE";

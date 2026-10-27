@@ -38,8 +38,8 @@ update public.faixas_frete
 -- 2) Cadastra/atualiza as seis tarifas comerciais (nome é unique).
 --    on conflict reativa e retifica execuções repetidas.
 insert into public.faixas_frete (nome, valor, ordem) values
-  ('Recife — Zona Norte',    9.99, 1),
-  ('Recife — Zona Sul',     19.99, 2),
+  ('Recife — Zona Norte',    14.99, 1),
+  ('Recife — Zona Sul',     21.99, 2),
   ('Região Metropolitana do Recife', 29.99, 3),
   ('Interior de Pernambuco',        29.99, 4),
   ('Outros estados',                34.99, 5),

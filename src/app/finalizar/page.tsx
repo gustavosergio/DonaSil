@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { MODO_DEMO } from "@/lib/site";
 import { FreteErro, listarFaixasFrete, type FaixaFrete } from "@/lib/frete";
 import FinalizarPedido from "@/components/FinalizarPedido";
+import { cotacaoConfigurada } from "@/lib/melhor-envio";
 
 // Página pessoal da compradora (sacola/entrega): não indexar.
 export const metadata: Metadata = {
@@ -79,7 +80,7 @@ async function ConteudoFinalizar() {
     );
   }
 
-  return <FinalizarPedido faixas={faixas} />;
+  return <FinalizarPedido faixas={faixas} cotacaoDisponivel={cotacaoConfigurada()} />;
 }
 
 function EsqueletoFinalizar() {

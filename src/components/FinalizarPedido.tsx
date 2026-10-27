@@ -30,7 +30,8 @@ import {
 } from "react";
 import { consultarCep, normalizarCep } from "@/lib/cep";
 import { formatarBRL } from "@/lib/format";
-import type { FaixaFrete } from "@/lib/frete";
+import { FAIXA_COTACAO_ID, type FaixaFrete } from "@/lib/frete";
+import type { OpcaoCorreios } from "@/lib/melhor-envio";
 import {
   formatarCep,
   formatarTelefone,
@@ -41,14 +42,16 @@ import { nomesPagamento, type FormaPagamento, type DadosEntrega } from "@/lib/pe
 import { useSacola } from "@/components/CarrinhoProvider";
 import {
   prepararPedido,
+  cotarFretePedido,
   type ResultadoPreparar,
 } from "@/app/finalizar/actions";
 
 type Props = {
   faixas: FaixaFrete[];
+  cotacaoDisponivel: boolean;
 };
 
-export default function FinalizarPedido({ faixas }: Props) {
+export default function FinalizarPedido({ faixas, cotacaoDisponivel }: Props) {
   const { itens, carregado } = useSacola();
   const [resultado, submeter, enviando] = useActionState<
     ResultadoPreparar | null,
@@ -59,6 +62,31 @@ export default function FinalizarPedido({ faixas }: Props) {
   const [editando, setEditando] = useState(false);
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>("pix");
   const [faixaSelecionada, setFaixaSelecionada] = useState(faixas[0]?.id ?? "");
+  const formulario = useRef<HTMLFormElement>(null);
+  const versaoCotacao = useRef(0);
+  const [cotando, setCotando] = useState(false);
+  const [erroCotacao, setErroCotacao] = useState("");
+  const [cotacao, setCotacao] = useState<{ itens: string; opcoes: OpcaoCorreios[] } | null>(null);
+  const [servicoFrete, setServicoFrete] = useState("");
+  const assinaturaItens = JSON.stringify(itens.map(i => [i.variacaoId, i.quantidade]));
+  const opcoesFrete = cotacao?.itens === assinaturaItens ? cotacao.opcoes : [];
+
+  async function calcularFrete() {
+    if (!formulario.current || cotando) return;
+    const versao = ++versaoCotacao.current;
+    const dados = new FormData(formulario.current);
+    setCotando(true); setErroCotacao(""); setCotacao(null); setServicoFrete("");
+    try {
+      const resposta = await cotarFretePedido(dados);
+      if (versao !== versaoCotacao.current) return;
+      if (resposta.ok) {
+        setCotacao({ itens: assinaturaItens, opcoes: resposta.opcoes });
+        setServicoFrete(resposta.opcoes[0]?.id ?? "");
+      } else setErroCotacao(resposta.mensagem);
+    } catch {
+      setErroCotacao("Não foi possível calcular o frete agora. Tente novamente.");
+    } finally { setCotando(false); }
+  }
 
   if (!carregado) {
     return (
@@ -242,7 +270,7 @@ export default function FinalizarPedido({ faixas }: Props) {
             <p className="mt-1">
               {resumo.entrega.nome}
               <br />
-              {resumo.entrega.endereco}
+              {resumo.entrega.endereco}, {resumo.entrega.numero}
               {resumo.entrega.complemento
                 ? ` — ${resumo.entrega.complemento}`
                 : ""}
@@ -293,7 +321,12 @@ export default function FinalizarPedido({ faixas }: Props) {
   );
 
   return (
-    <form action={submeter} onReset={(evento) => evento.preventDefault()} className="mt-8 space-y-8">
+    <form ref={formulario} action={submeter} onReset={(evento) => evento.preventDefault()}
+      onChange={evento => {
+        if (evento.target instanceof HTMLInputElement && evento.target.name === "cep") {
+          versaoCotacao.current++; setCotacao(null); setServicoFrete(""); setErroCotacao("");
+        }
+      }} className="mt-8 space-y-8">
       {/* Problemas de sacola/estoque/rede (Server Action) */}
       {problemas.length > 0 && (
         <div
@@ -395,12 +428,30 @@ export default function FinalizarPedido({ faixas }: Props) {
                     {faixa.nome}
                   </span>
                   <span className="font-semibold text-ink">
-                    {formatarBRL(faixa.valor)}
+                    {faixa.id === FAIXA_COTACAO_ID ? "A calcular" : formatarBRL(faixa.valor)}
                   </span>
                 </label>
               );
             })}
           </div>
+          {faixaSelecionada === FAIXA_COTACAO_ID && (
+            <div className="mt-4 space-y-3 rounded-2xl border border-sand p-4">
+              <p className="text-sm text-ink-soft">{cotacaoDisponivel ? "Informe o CEP para consultar as opções de entrega dos Correios." : "A consulta automática está em preparação. Para pedidos de até R$ 129,99, consulte o frete com a loja pelo WhatsApp."} Pedidos acima de R$ 129,99 continuam com frete grátis.</p>
+              <button type="button" onClick={calcularFrete} disabled={cotando}
+                className="rounded-full border border-gold px-5 py-2.5 text-sm font-medium text-ink disabled:opacity-50">
+                {cotando ? "Calculando…" : "Calcular frete"}
+              </button>
+              {erroCotacao && <p role="alert" className="text-sm text-ink">{erroCotacao}</p>}
+              {opcoesFrete.map(opcao => (
+                <label key={opcao.id} className="flex items-center gap-3 text-sm text-ink">
+                  <input type="radio" name="servicoFrete" value={opcao.id} checked={servicoFrete === opcao.id}
+                    onChange={() => setServicoFrete(opcao.id)} className="accent-gold" />
+                  {opcao.nome} · {formatarBRL(opcao.valor)}{opcao.prazo > 0 ? ` · prazo estimado: ${opcao.prazo} dias úteis` : ""}
+                </label>
+              ))}
+              <input type="hidden" name="freteCotado" value={opcoesFrete.find(o => o.id === servicoFrete)?.valor ?? ""} />
+            </div>
+          )}
           {errosCampos.faixaFreteId && (
             <p
               role="alert"
@@ -523,18 +574,17 @@ function Campo({ rotulo, nome, erro, opcional, ...resto }: CampoProps) {
 //
 // A consulta acontece SOMENTE com o CEP completo (8 dígitos),
 // nunca a cada tecla; respostas de consultas anteriores são
-// descartadas pela ordem; campo que a cliente já digitou nunca
-// é sobrescrito.
+// descartadas pela ordem. Os campos de endereço são somente leitura.
 // ------------------------------------------------------------
 
-type CamposAutofill = "endereco" | "bairro" | "cidade" | "uf";
 
 type StatusCep =
   | "parado"
   | "buscando"
   | "preenchido"
   | "nao_encontrado"
-  | "falha";
+  | "falha"
+  | "incompleto";
 
 type PropsCamposEntrega = {
   entregaAnterior: DadosEntrega | null;
@@ -542,10 +592,11 @@ type PropsCamposEntrega = {
 };
 
 const MENSAGENS_CEP: Record<Exclude<StatusCep, "parado">, string> = {
+  incompleto: "Este CEP não informa uma rua completa. Use o CEP específico da rua ou fale com a loja para combinar a entrega.",
   buscando: "Buscando endereço…",
-  preenchido: "Endereço encontrado — confira e complete o número.",
-  nao_encontrado: "CEP não encontrado — preencha o endereço manualmente.",
-  falha: "Não foi possível consultar o CEP agora — preencha o endereço manualmente.",
+  preenchido: "CEP confirmado. Rua, bairro, cidade e estado estão bloqueados. Preencha o número do imóvel.",
+  nao_encontrado: "CEP não encontrado. Confira o CEP e tente novamente.",
+  falha: "Não foi possível consultar o CEP agora. Tente novamente antes de continuar.",
 };
 
 function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
@@ -559,22 +610,12 @@ function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
   const [whatsapp, setWhatsapp] = useState(
     formatarTelefone(entregaAnterior?.whatsapp ?? ""),
   );
+  const [numero, setNumero] = useState(entregaAnterior?.numero ?? "");
   const [cidade, setCidade] = useState(entregaAnterior?.cidade ?? "");
   const [endereco, setEndereco] = useState(entregaAnterior?.endereco ?? "");
   const [bairro, setBairro] = useState(entregaAnterior?.bairro ?? "");
   const [uf, setUf] = useState(entregaAnterior?.uf ?? "");
   const [statusCep, setStatusCep] = useState<StatusCep>("parado");
-
-  // Ref (não estado): precisa estar SEMPRE atualizado quando a
-  // resposta chegar — se fosse estado, a resposta enxergaria um
-  // valor antigo (closure) e poderia sobrescrever campo que a
-  // cliente acabou de digitar manualmente.
-  const camposEditados = useRef<Record<CamposAutofill, boolean>>({
-    endereco: false,
-    bairro: false,
-    cidade: false,
-    uf: false,
-  });
 
   // Ordem da consulta em andamento: resposta de CEP que a cliente
   // já trocou por outro é descartada em silêncio.
@@ -676,6 +717,7 @@ function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
     // refaz a chamada à rede.
     const normalizado = normalizarCep(valor);
     const ordem = ++ordemConsulta.current;
+    setEndereco(""); setBairro(""); setCidade(""); setUf("");
     if (!normalizado) {
       setStatusCep("parado");
       return;
@@ -689,31 +731,17 @@ function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
     }
 
     if (resultado.ok) {
-      const editados = camposEditados.current;
-      // Preenche SOMENTE o que veio E o que a cliente não editou.
-      if (resultado.dados.endereco && !editados.endereco) {
-        setEndereco(resultado.dados.endereco);
-      }
-      if (resultado.dados.bairro && !editados.bairro) {
-        setBairro(resultado.dados.bairro);
-      }
-      if (resultado.dados.cidade && !editados.cidade) {
-        setCidade(resultado.dados.cidade);
-      }
-      if (resultado.dados.uf && !editados.uf) {
-        setUf(resultado.dados.uf);
-      }
-      setStatusCep("preenchido");
+      setEndereco(resultado.dados.endereco);
+      setBairro(resultado.dados.bairro);
+      setCidade(resultado.dados.cidade);
+      setUf(resultado.dados.uf);
+      setStatusCep(resultado.dados.endereco && resultado.dados.bairro && resultado.dados.cidade ? "preenchido" : "incompleto");
       return;
     }
 
     setStatusCep(
       resultado.motivo === "nao_encontrado" ? "nao_encontrado" : "falha",
     );
-  }
-
-  function marcarEditado(campo: CamposAutofill) {
-    camposEditados.current[campo] = true;
   }
 
   return (
@@ -764,22 +792,16 @@ function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
           maxLength={120}
           autoComplete="address-level2"
           value={cidade}
-          onChange={(evento) => {
-            marcarEditado("cidade");
-            setCidade(evento.target.value);
-          }}
+          readOnly
         />
       </div>
 
-      {/* Estado da consulta do CEP (carregamento e avisos).
-          Melhoria progressiva: nunca bloqueia o envio. Quando o
-          CEP não está completo, não há mensagem — layout idêntico
-          ao de antes. */}
+      {/* O CEP confirma o endereço; falhas pedem nova consulta. */}
       {statusCep !== "parado" && (
         <p
           role="status"
           className={
-            statusCep === "nao_encontrado" || statusCep === "falha"
+            statusCep === "nao_encontrado" || statusCep === "falha" || statusCep === "incompleto"
               ? "mt-3 rounded-lg bg-champagne px-3 py-1.5 text-xs leading-5 text-ink"
               : "mt-3 text-xs leading-5 text-ink-soft"
           }
@@ -790,17 +812,24 @@ function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
 
       <div className="mt-4 grid gap-4">
         <Campo
-          rotulo="Endereço (rua e número)"
+          rotulo="Rua"
           nome="endereco"
           erro={errosCampos.endereco}
           required
           maxLength={300}
           autoComplete="address-line1"
           value={endereco}
-          onChange={(evento) => {
-            marcarEditado("endereco");
-            setEndereco(evento.target.value);
-          }}
+          readOnly
+        />
+        <Campo
+          rotulo="Número"
+          nome="numero"
+          erro={errosCampos.numero}
+          required
+          maxLength={20}
+          placeholder="Ex.: 123 ou S/N"
+          value={numero}
+          onChange={evento => setNumero(evento.target.value)}
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo
@@ -818,14 +847,11 @@ function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
             rotulo="Bairro"
             nome="bairro"
             erro={errosCampos.bairro}
-            opcional
+            required
             maxLength={120}
             autoComplete="address-level3"
             value={bairro}
-            onChange={(evento) => {
-              marcarEditado("bairro");
-              setBairro(evento.target.value);
-            }}
+            readOnly
           />
         </div>
         <div className="sm:w-40">
@@ -842,10 +868,7 @@ function CamposEntrega({ entregaAnterior, errosCampos }: PropsCamposEntrega) {
             className="uppercase"
             autoComplete="address-level1"
             value={uf}
-            onChange={(evento) => {
-              marcarEditado("uf");
-              setUf(evento.target.value);
-            }}
+            readOnly
           />
         </div>
       </div>

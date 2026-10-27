@@ -14,7 +14,7 @@ const objeto = { ...produto, id: id(6), slug: 'quadro-teste', nome: 'Quadro de t
 const blusa = { ...produto, id: id(41), slug: 'blusa-basica', nome: 'Blusa Básica', preco: 40, descricao: 'Blusa para o dia a dia.', categorias: categorias[2], variacoes: [{ id: id(42), tamanho: 'M', cor: 'Off-white', cor_hex: '#f5f0e8', quantidade: 1 }] };
 let mostrarDesapego = true;
 const nomes = ['Recife — Zona Norte', 'Recife — Zona Sul', 'Região Metropolitana do Recife', 'Interior de Pernambuco', 'Outros estados', 'Retirada no local — endereço combinado pelo WhatsApp'];
-const fretes = nomes.map((nome, i) => ({ id: id(10+i), nome, valor: [9.99,19.99,29.99,29.99,34.99,0][i], ativo: true, ordem: i+1 }));
+const fretes = nomes.map((nome, i) => ({ id: id(10+i), nome, valor: [14.99,21.99,29.99,29.99,34.99,0][i], ativo: true, ordem: i+1 }));
 let falhaCatalogo = false;
 
 http.createServer(async (req, res) => {
@@ -26,6 +26,7 @@ http.createServer(async (req, res) => {
     res.setHeader('Content-Type', 'image/svg+xml');
     return res.end('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="#eed8b5"/><circle cx="150" cy="200" r="80" fill="#ad6e76"/></svg>');
   }
+  if (url.pathname.startsWith('/ws/')) return responder({ logradouro: 'Rua de Teste', bairro: 'Bairro Teste', localidade: 'Recife', uf: 'PE' });
   if (url.pathname === '/') return responder({ teste: true });
   if (url.pathname === '/__test__/desapego' && req.method === 'POST') {
     let corpo = ''; for await (const parte of req) corpo += parte;

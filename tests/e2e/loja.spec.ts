@@ -47,7 +47,7 @@ async function preencherEntrega(page: Page) {
   await page.getByLabel("WhatsApp (com DDD)").fill("81999998888");
   await page.getByLabel("CEP", { exact: true }).fill("52000000");
   await expect(page.getByLabel("Cidade", { exact: true })).toHaveValue("Recife");
-  await page.getByLabel("Endereço (rua e número)").fill("Rua de Teste, 123");
+  await page.getByLabel("Número", { exact: true }).fill("123");
 }
 
 test("vitrine real, categorias e busca sem peças de demonstração", async ({ page }, testInfo) => {
@@ -109,7 +109,7 @@ test("sacola persiste e confirma entrega com preços do servidor", async ({ page
   const destino = new URL((await link.getAttribute("href"))!);
   expect(destino.hostname).toBe("wa.me");
   expect(destino.pathname).toBe("/5581999770114");
-  expect(destino.searchParams.get("text")).toContain("129,99");
+  expect(destino.searchParams.get("text")).toContain("134,99");
   expect(destino.searchParams.get("text")).toContain("Rua de Teste, 123");
   await expect(page.getByText("Seu pedido ainda NÃO foi registrado no site.")).toBeVisible();
 });
@@ -127,7 +127,7 @@ for (const forma of ['Cartão por link InfinitePay', 'Cartão na maquininha']) {
     const mensagem = new URL((await link.getAttribute('href'))!).searchParams.get('text')!;
     expect(mensagem).toContain(`Pagamento: ${forma}`);
     expect(mensagem).toMatch(/Acréscimo cartão \(15%\): R\$\s*18,00/);
-    expect(mensagem).toMatch(/Total: R\$\s*147,99/);
+    expect(mensagem).toMatch(/Total: R\$\s*152,99/);
     await page.getByRole('button', { name: /Editar/ }).click();
     await expect(page.getByRole('radio', { name: `${forma} (+15%)`, exact: true })).toBeChecked();
   });
@@ -151,11 +151,11 @@ test("região incompatível é recusada no servidor", async ({ page }) => {
   await adicionarPeca(page);
   await page.goto("/finalizar");
   await preencherEntrega(page);
-  await page.getByRole("radio", { name: /Outros estados/ }).check();
+  await page.getByRole("radio", { name: /Outras cidades/ }).check();
   await page.getByRole("button", { name: "Conferir e continuar" }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "não corresponde ao estado informado" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Para Recife, escolha" })).toBeVisible();
   await expect(page.getByLabel("Nome completo")).toHaveValue("Cliente de Teste");
-  await expect(page.getByRole("radio", { name: /Outros estados/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /Outras cidades/ })).toBeChecked();
   await expect(page.getByRole("link", { name: "Enviar pedido no WhatsApp" })).toHaveCount(0);
   await page.getByRole("radio", { name: /Recife — Zona Norte/ }).check();
   await page.getByRole("button", { name: "Conferir e continuar" }).click();
@@ -246,16 +246,15 @@ test("mudança da sacola em outra aba bloqueia o resumo antigo", async ({ page, 
   await outra.close();
 });
 
-test("UF inexistente é recusada sem apagar os dados da cliente", async ({ page }) => {
+test("UF preenchida pelo CEP permanece bloqueada", async ({ page }) => {
   await adicionarPeca(page);
   await page.goto('/finalizar');
   await preencherEntrega(page);
-  await page.getByLabel('UF', { exact: true }).fill('XX');
-  await page.getByRole('radio', { name: /Outros estados/ }).check();
+  await expect(page.getByLabel('UF', { exact: true })).toHaveAttribute('readonly', '');
+  await expect(page.getByLabel('UF', { exact: true })).toHaveValue('PE');
+  await page.getByRole('radio', { name: /Zona Norte/ }).check();
   await page.getByRole('button', { name: 'Conferir e continuar' }).click();
-  await expect(page.getByRole('alert').filter({ hasText: 'Informe uma UF válida' })).toBeVisible();
-  await expect(page.getByLabel('Nome completo')).toHaveValue('Cliente de Teste');
-  await expect(page.getByLabel('UF', { exact: true })).toHaveValue('XX');
+  await expect(page.getByRole('heading', { name: 'Confira o seu pedido' })).toBeVisible();
 });
 
 test("Desapego separa objetos da moda e combina transporte pelo WhatsApp", async ({ page }) => {
@@ -416,4 +415,27 @@ test("painel informa cor por texto ao enviar foto sem seletor de tons", async ({
   await page.goto('/admin/produtos/novo');
   await expect(page.locator('input[type=color]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Adicionar cor', exact: true })).toHaveCount(0);
+});
+
+
+test("CEP bloqueia endereço, separa número e limpa dados ao trocar", async ({ page }) => {
+  await adicionarPeca(page);
+  await page.goto('/finalizar');
+  await preencherEntrega(page);
+  for (const nome of ['Rua', 'Bairro', 'Cidade', 'UF']) {
+    await expect(page.getByLabel(nome, { exact: true })).toHaveAttribute('readonly', '');
+  }
+  await expect(page.getByLabel('Rua', { exact: true })).toHaveValue('Rua de Teste');
+  await expect(page.getByLabel('Número', { exact: true })).toHaveValue('123');
+  await page.getByLabel('Número', { exact: true }).fill('456');
+  await page.getByRole('radio', { name: /Zona Sul/ }).check();
+  await page.getByRole('button', { name: 'Conferir e continuar' }).click();
+  const link = page.getByRole('link', { name: 'Enviar pedido no WhatsApp' });
+  await expect(link).toBeVisible();
+  const texto = new URL((await link.getAttribute('href'))!).searchParams.get('text')!;
+  expect(texto).toContain('Rua de Teste, 456');
+  expect(texto).toContain('141,99');
+  await page.getByRole('button', { name: 'Editar dados', exact: true }).click();
+  await page.getByLabel('CEP', { exact: true }).fill('520');
+  for (const nome of ['Rua', 'Bairro', 'Cidade', 'UF']) await expect(page.getByLabel(nome, { exact: true })).toHaveValue('');
 });

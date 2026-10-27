@@ -29,8 +29,8 @@ for (const forma of ['pix', 'dinheiro']) assert.equal(pedido.acrescimoPagamento(
 assert.equal(pedido.formaPagamentoSchema.safeParse('cartao-sem-taxa').success, false);
 const cep = carregar('cep');
 const tarifas = [
-  [frete.FAIXA_ZONA_NORTE, 9.99],
-  [frete.FAIXA_ZONA_SUL, 19.99],
+  [frete.FAIXA_ZONA_NORTE, 14.99],
+  [frete.FAIXA_ZONA_SUL, 21.99],
   [frete.FAIXA_RMR, 29.99],
   [frete.FAIXA_INTERIOR_PE, 29.99],
   [frete.FAIXA_OUTROS_ESTADOS, 34.99],
