@@ -5,6 +5,10 @@
   "compatibility_date": "2026-10-26",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
+  "routes": [
+    { "pattern": "donasilmodafeminina.com.br", "custom_domain": true },
+    { "pattern": "www.donasilmodafeminina.com.br", "custom_domain": true }
+  ],
   "keep_vars": true,
   "assets": {
     "directory": ".open-next/assets",

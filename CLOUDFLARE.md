@@ -10,6 +10,14 @@ Verificação no endereço HTTPS aprovada em computador e celular: catálogo rea
 
 ## Configuração
 
+## Domínio próprio
+
+Domínios vinculados ao Worker: `donasilmodafeminina.com.br` e `www.donasilmodafeminina.com.br`.
+Adicionados ao plano gratuito em 27/10/2026. A ativação depende da delegação no Registro.br para `joselyn.ns.cloudflare.com` e `micah.ns.cloudflare.com`.
+Após a troca, confirmar a zona ativa e testar HTTPS nos dois endereços antes de divulgar. Os domínios estão em `wrangler.jsonc` para serem mantidos nas próximas publicações.
+
+## Ambiente de compilação
+
 Use Node 24 e instale as dependências com `npm ci`. Configure no ambiente de compilação:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
