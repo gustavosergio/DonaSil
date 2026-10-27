@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MODO_DEMO, site } from "@/lib/site";
 import { linkWhatsApp } from "@/lib/whatsapp";
+import { formatarTelefone } from "@/lib/mascaras";
 
 export default function Footer() {
   return (
@@ -45,7 +46,7 @@ export default function Footer() {
                 rel="noopener noreferrer"
                 className="transition hover:text-gold-ink"
               >
-                WhatsApp
+                WhatsApp · {formatarTelefone(site.whatsapp.replace(/^55/, ""))}
               </a>
             </li>
             <li>
