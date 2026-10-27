@@ -9,6 +9,8 @@ import { CarrinhoProvider } from "@/components/CarrinhoProvider";
 import MostrarForaDoPainel from "@/components/MostrarForaDoPainel";
 import { MODO_DEMO } from "@/lib/site";
 
+export const dynamic = "force-dynamic";
+
 const playfair = Playfair_Display({
   variable: "--font-playfair",
   subsets: ["latin"],

@@ -53,3 +53,9 @@ supabase/RELATORIO-SEGURANCA.md
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Pacotes e configurações locais da Cloudflare
+.open-next/
+.wrangler/
+.dev.vars*
+.backups/

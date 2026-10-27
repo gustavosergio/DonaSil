@@ -79,8 +79,8 @@ export default function PaginaConfiguracoes() {
           Sinalizações da loja
         </h2>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-soft">
-          Duas chaves controlam a fase da loja. Elas são alteradas apenas nas
-          etapas planejadas — nunca por esta página.
+          O catálogo real está separado da demonstração. As vendas são
+          confirmadas pelo atendimento, com controle de estoque no painel.
         </p>
 
         <dl className="mt-5 space-y-4">
@@ -88,26 +88,24 @@ export default function PaginaConfiguracoes() {
             <div>
               <dt className="text-sm font-semibold text-ink">Modo demonstração</dt>
               <dd className="text-xs leading-5 text-ink-soft">
-                Catálogo com peças fictícias de teste. Vira “desligado” na
-                publicação oficial (Etapa 10), quando o catálogo real entra.
+                Quando desligado, o catálogo exibe somente os produtos reais.
               </dd>
             </div>
             <RotuloStatus tonalidade={MODO_DEMO ? "pendente" : "ativo"}>
-              {MODO_DEMO ? "Ativo (Etapa 10 desliga)" : "Desligado"}
+              {MODO_DEMO ? "Ativo" : "Desligado"}
             </RotuloStatus>
           </div>
 
           <div className="flex flex-col gap-1.5 rounded-xl border border-sand px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <dt className="text-sm font-semibold text-ink">Compras pela loja</dt>
+              <dt className="text-sm font-semibold text-ink">Finalização das vendas</dt>
               <dd className="text-xs leading-5 text-ink-soft">
-                Guardada no banco de dados com chave “compras_ativas”. Enquanto
-                estiver desligada, a finalização é enviada por WhatsApp.
-                Enquanto a leitura administrativa não é integrada, o valor não é
-                exibido aqui — nenhum valor é inventado.
+                O site confere os valores e prepara a mensagem. O atendimento
+                confirma estoque, pagamento e entrega pelo WhatsApp. A baixa de
+                estoque deve ser feita em Produtos; não ocorre automaticamente.
               </dd>
             </div>
-            <RotuloStatus tonalidade="neutro">Gerenciado no banco</RotuloStatus>
+            <RotuloStatus tonalidade="ativo">WhatsApp</RotuloStatus>
           </div>
         </dl>
       </section>

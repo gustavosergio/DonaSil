@@ -36,7 +36,7 @@ export default function PaginaNovoProduto() {
       <div className="mt-4">
         <TituloSecao
           titulo="Cadastrar produto"
-          descricao="Preencha os dados da peça. Ao salvar, ela é criada no banco como ativa — fica visível na loja pública de imediato, com as cores e o estoque escolhidos."
+          descricao="Preencha os dados da peça. Ela será salva como rascunho para adicionar as fotos e conferir os detalhes antes de ativar na loja."
         />
       </div>
 

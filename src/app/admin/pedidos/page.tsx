@@ -36,7 +36,6 @@ import { IconeOlho } from "@/components/admin/Icones";
 import { RotuloStatus, type TonalidadeRotulo } from "@/components/admin/RotuloStatus";
 import { Tabela, Td, Th } from "@/components/admin/Tabela";
 import { TituloSecao } from "@/components/admin/TituloSecao";
-import { MODO_DEMO } from "@/lib/site";
 
 /** Rótulo e cor de cada status previsto no banco. */
 const ROTULOS: Record<
@@ -78,13 +77,12 @@ export default function PaginaPedidos(props: PageProps<"/admin/pedidos">) {
         descricao="Os pedidos reais do banco — número, data, cliente, valor e status — pela leitura exclusiva de administradoras."
       />
 
-      {MODO_DEMO && (
-        <Aviso tonalidade="atencao" titulo="Nenhum pedido pode existir por enquanto">
-          A loja está em modo demonstração: a finalização de compra é enviada por
-          WhatsApp e não grava pedidos no banco. A lista abaixo lê os pedidos
-          REAIS do banco — e, por enquanto, nenhum pode existir.
-        </Aviso>
-      )}
+      <Aviso tonalidade="atencao" titulo="Vendas concluídas pelo WhatsApp">
+        As solicitações feitas pelo site são enviadas ao WhatsApp e não são
+        registradas nesta lista. Confirme a disponibilidade no atendimento e
+        atualize as quantidades em Produtos ao reservar ou vender uma peça.
+        A lista abaixo mostra somente pedidos já registrados no banco.
+      </Aviso>
 
       <Suspense fallback={<EsqueletoPedidos />}>
         <ConteudoPedidos searchParams={props.searchParams} />

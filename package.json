@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "node tests/regras.cjs && node tests/catalogo.cjs && node tests/estoque.cjs && node tests/painel-auth.cjs && node tests/produtos.cjs",
+    "test": "node tests/regras.cjs && node tests/catalogo.cjs && node tests/estoque.cjs && node tests/painel-auth.cjs && node tests/produtos.cjs && node tests/edicao-produtos.cjs",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report",
     "dev": "next dev",
@@ -11,7 +11,12 @@
     "build:turbopack": "next build",
     "build:webpack": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "cloudflare:build": "node scripts/cloudflare.cjs build",
+    "cloudflare:check": "node scripts/cloudflare.cjs check",
+    "cloudflare:preview": "node scripts/cloudflare.cjs preview",
+    "cloudflare:deploy": "node scripts/cloudflare.cjs deploy",
+    "publicacao:verificar": "node scripts/verificar-publicacao.cjs --exigir-pronto"
   },
   "dependencies": {
     "next": "16.4.2",
@@ -20,6 +25,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "1.20.13",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/turbopack": "^4",
@@ -29,6 +35,12 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "4.153.0"
+  },
+  "overrides": {
+    "@node-minify/core": {
+      "glob": "10.5.0"
+    }
   }
 }

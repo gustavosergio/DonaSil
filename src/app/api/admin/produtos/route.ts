@@ -17,8 +17,7 @@
 //     português — nunca detalhes internos do banco.
 //
 // Ordem da gravação (imposta pelas chaves estrangeiras):
-//   1. produtos       — criado ATIVO (rascunho depende do ajuste da
-//                       política pública de leitura; ver plano);
+//   1. produtos       — criado como rascunho para completar as fotos;
 //   2. produto_cores  — uma linha por cor (devolve os ids);
 //   3. variacoes      — cada cor × cada tamanho, preenchendo cor_id
 //                       (nova) E as colunas legadas cor/cor_hex,
@@ -335,7 +334,7 @@ async function gravarProduto(
           preco: corpo.preco,
           categoria_id: categoria[0].id,
           fotos: [],
-          ativo: true,
+          ativo: false,
           destaque: corpo.destaque,
           demo: false,
         },

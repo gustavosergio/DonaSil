@@ -38,6 +38,7 @@ async function main() {
       if (tabela === 'produtos' && metodo === 'POST') {
         const produto = JSON.parse(opcoes.body)[0];
         assert.equal(produto.demo, false);
+          assert.equal(produto.ativo, false, 'Novo anúncio deve permanecer em rascunho até receber fotos');
         assert.equal(produto.preco, 129.99);
         return Response.json([{ id: id(2), slug: 'vestido-qa' }], { status: 201 });
       }

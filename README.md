@@ -2,14 +2,14 @@
 
 Loja virtual da Dona Sil — moda feminina com vendas online.
 
-Site em construção. Primeira versão planejada para novembro de 2026.
+Catálogo real com finalização pelo WhatsApp e seção Desapego para objetos de casa.
 
 ## Tecnologias
 
 - **Next.js 16** (App Router) + **TypeScript** — páginas e lógica do site
 - **Tailwind CSS 4** — visual e identidade
-- **Supabase** (a partir da Etapa 3) — produtos, estoque, pedidos e fotos
-- **Hospedagem** — requer execução de servidor Next.js para cookies, Server Actions e rotas de API; não é uma exportação estática.
+- **Supabase** — produtos, estoque, autenticação do painel e fotos
+- **Hospedagem** — Cloudflare Workers com OpenNext; não é uma exportação estática para Pages.
 
 ## Como rodar no seu computador
 
@@ -35,6 +35,11 @@ Use `npm test` para as regras comerciais. A compilação padrão usa Webpack;
 | `npm run build` | Gera a versão final (usada pela hospedagem) |
 | `npm run start` | Roda a versão final localmente |
 | `npm run lint` | Verifica erros de estilo no código |
+| `npm run publicacao:verificar` | Confere catálogo, fotos, entrega e leitura privada |
+| `npm run cloudflare:check` | Compila e simula a publicação na Cloudflare |
+| `npm run cloudflare:deploy` | Publica após autenticação e verificação do catálogo |
+
+Veja [CLOUDFLARE.md](CLOUDFLARE.md) para publicar e [GUIA-DA-LOJA.md](GUIA-DA-LOJA.md) para atender as vendas e atualizar o estoque.
 
 ## Segurança
 

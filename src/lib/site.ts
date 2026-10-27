@@ -1,12 +1,12 @@
 // Configuração central do site.
 //
-// Ausência da variável mantém a demonstração. Para abrir a vitrine,
-// configure NEXT_PUBLIC_MODO_DEMO=false e gere uma nova compilação.
+// A vitrine real é o padrão. A demonstração exige
+// NEXT_PUBLIC_MODO_DEMO=true e uma nova compilação.
 // Variáveis NEXT_PUBLIC são fixadas no build do Next.js.
 //
 // Os contatos abaixo já são os oficiais da loja.
 
-export const MODO_DEMO = process.env.NEXT_PUBLIC_MODO_DEMO !== "false";
+export const MODO_DEMO = process.env.NEXT_PUBLIC_MODO_DEMO === "true";
 
 export const site = {
   nome: "Dona Sil",

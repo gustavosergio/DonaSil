@@ -87,9 +87,12 @@ const corpoSchema = z.object({
 /** Slug do PATH no formato canônico gerado pelo cadastro
  *  (gerarSlugBase: a-z, 0-9 e hífen). Recusa qualquer outra
  *  coisa ANTES de tocar o banco — nunca vira filtro PostgREST. */
-const slugParamSchema = z.string().regex(/^[a-z0-9-]{1,80}$/);
+const slugParamSchema = z.string().regex(/^[a-z0-9_-]{1,80}$/);
 
-const produtoAtualSchema = z.array(z.object({ id: z.uuid() }));
+const produtoAtualSchema = z.array(z.object({
+  id: z.uuid(),
+  produto_cores: z.array(z.object({ produto_fotos: z.array(z.object({ caminho: z.string().min(1) })) })),
+}));
 const categoriaIdSchema = z.array(z.object({ id: z.uuid() }));
 const produtoAtualizadoSchema = z.array(
   z.object({
@@ -264,7 +267,7 @@ export async function PATCH(
     //    (a leitura administrativa enxerga ATIVAS e RASCUNHOS —
     //    as políticas escrita_admin_* valem para SELECT).
     const paramsProduto = new URLSearchParams({
-      select: "id",
+      select: "id,produto_cores(produto_fotos(caminho))",
       slug: `eq.${slugParam.data}`,
       limit: "1",
     });
@@ -283,6 +286,9 @@ export async function PATCH(
       );
     }
     const alvo = atual[0];
+    if (corpo.data.ativo && (!corpo.data.descricao.trim() || !alvo.produto_cores.some(cor => cor.produto_fotos.length > 0))) {
+      return respostaErro(400, "Adicione a descrição e pelo menos uma foto antes de ativar o anúncio. Salve como rascunho enquanto estiver preparando.");
+    }
 
     // 5. A categoria precisa existir (o formulário lista as reais,
     //    mas a loja pode ter mudado desde que a página foi aberta).

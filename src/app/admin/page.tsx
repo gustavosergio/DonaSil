@@ -30,6 +30,12 @@ export default function PaginaVisaoGeral() {
         titulo="Olá! Este é o painel da Dona Sil."
         descricao="Cadastre peças, edite os dados, envie fotos e ajuste o estoque em Produtos. As vendas desta versão são concluídas pelo atendimento no WhatsApp."
       />
+      <Aviso titulo="Confirme a venda e atualize o estoque">
+        Os pedidos chegam pelo WhatsApp e não reservam as peças automaticamente.
+        Antes de confirmar uma reserva ou venda, abra Produtos e ajuste o estoque.
+        Para a última unidade, coloque quantidade 0. Se a reserva for cancelada,
+        devolva a unidade ao estoque. Faça o mesmo nas vendas realizadas fora do site.
+      </Aviso>
 
       {MODO_DEMO && (
         <Aviso tonalidade="atencao" titulo="Modo demonstração">

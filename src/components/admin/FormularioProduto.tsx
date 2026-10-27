@@ -7,7 +7,7 @@
 //   * modo "novo" → GRAVAÇÃO REAL: envia o cadastro para
 //     POST /api/admin/produtos (Route Handler que valida a sessão
 //     httpOnly no servidor e grava produto + cores + variações
-//     no Supabase). A peça nasce ATIVA na loja.
+//     no Supabase). A peça nasce em rascunho para completar as fotos.
 //   * modo "edicao" → GRAVAÇÃO REAL dos dados EDITÁVEIS: envia
 //     para PATCH /api/admin/produtos/[slug] (mesma validação de
 //     sessão + admin no servidor). Grava nome, preço, categoria,
@@ -405,10 +405,10 @@ export function FormularioProduto({
           da peça permanece o mesmo para preservar seus links e fotos.
         </Aviso>
       ) : (
-        <Aviso titulo="Ao salvar, a peça entra na loja como ativa">
-          O cadastro grava direto no banco: produto, cores e estoque de cada
-          tamanho. A peça fica VISÍVEL na loja pública de imediato — a opção de
-          rascunho chega depois de um ajuste de segurança.
+        <Aviso titulo="Primeiro prepare o anúncio, depois publique">
+          O produto será salvo como rascunho. Na próxima tela, adicione as fotos
+          reais, confira a descrição e altere o status para Ativo quando estiver
+          pronto. Assim o catálogo não exibe anúncios incompletos.
         </Aviso>
       )}
 
