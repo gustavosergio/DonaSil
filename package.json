@@ -12,6 +12,8 @@
     "build:webpack": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "verificar:push": "node scripts/verificar-push.cjs",
+    "hooks:instalar": "git config core.hooksPath .githooks",
     "cloudflare:build": "node scripts/cloudflare.cjs build",
     "cloudflare:check": "node scripts/cloudflare.cjs check",
     "cloudflare:preview": "node scripts/cloudflare.cjs preview",

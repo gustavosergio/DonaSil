@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Poppins } from "next/font/google";
+import localFont from "next/font/local";
 import { Suspense } from "react";
 import "./globals.css";
 import Header from "@/components/Header";
@@ -11,17 +11,24 @@ import { MODO_DEMO } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-const playfair = Playfair_Display({
+const playfair = localFont({
   variable: "--font-playfair",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  weight: ["500", "600", "700"],
+  src: [
+    { path: "./fonts/PlayfairDisplay[wght].ttf", weight: "500 700", style: "normal" },
+    { path: "./fonts/PlayfairDisplay-Italic[wght].ttf", weight: "500 700", style: "italic" },
+  ],
+  display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
-const poppins = Poppins({
+const poppins = localFont({
   variable: "--font-poppins",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  src: [
+    { path: "./fonts/Poppins-Regular.ttf", weight: "400", style: "normal" },
+    { path: "./fonts/Poppins-Medium.ttf", weight: "500", style: "normal" },
+    { path: "./fonts/Poppins-SemiBold.ttf", weight: "600", style: "normal" },
+  ],
+  display: "swap",
 });
 
 export const metadata: Metadata = {

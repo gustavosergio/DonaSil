@@ -15,6 +15,7 @@ export default function GaleriaPeca({ fotos, nome }: { fotos: string[]; nome: st
   }, []);
 
   function abrirZoom() {
+    if (!dialogo.current || dialogo.current.open) return;
     setZoom(1);
     dialogo.current?.showModal();
     overflowAnterior.current = document.body.style.overflow;
@@ -23,10 +24,18 @@ export default function GaleriaPeca({ fotos, nome }: { fotos: string[]; nome: st
   }
 
   function aoFechar() {
+    // Um evento close anterior pode chegar depois de a galeria reabrir.
+    if (dialogo.current?.open) return;
     if (overflowAnterior.current !== null) {
       document.body.style.overflow = overflowAnterior.current;
       overflowAnterior.current = null;
     }
+  }
+
+  function fecharZoom() {
+    dialogo.current?.close();
+    // close é assíncrono no navegador; restaura a rolagem já nesta ação.
+    aoFechar();
   }
 
   function trocarFoto(indice: number) {
@@ -76,7 +85,7 @@ export default function GaleriaPeca({ fotos, nome }: { fotos: string[]; nome: st
           ))}
         </div>
       )}
-      <dialog ref={dialogo} onClose={aoFechar} aria-labelledby="titulo-zoom" onClick={evento => { if (evento.target === evento.currentTarget) dialogo.current?.close(); }} className="fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none bg-[#141414] p-0 text-white backdrop:bg-black/80">
+      <dialog ref={dialogo} onClose={aoFechar} onCancel={evento => { evento.preventDefault(); fecharZoom(); }} aria-labelledby="titulo-zoom" onClick={evento => { if (evento.target === evento.currentTarget) fecharZoom(); }} className="fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none bg-[#141414] p-0 text-white backdrop:bg-black/80">
         <div className="flex h-full flex-col">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/20 px-4 py-3 sm:px-6">
             <p id="titulo-zoom" className="min-w-0 flex-1 text-sm font-medium">{nome}</p>
@@ -84,7 +93,7 @@ export default function GaleriaPeca({ fotos, nome }: { fotos: string[]; nome: st
               <button type="button" aria-label="Diminuir zoom" disabled={zoom <= 1} onClick={() => mudarZoom(-0.5)} className="h-11 w-11 rounded-full bg-white/15 text-xl hover:bg-white/25 disabled:opacity-40">−</button>
               <output aria-label="Nível de zoom" aria-live="polite" className="w-12 text-center text-xs">{Math.round(zoom * 100)}%</output>
               <button type="button" aria-label="Aumentar zoom" disabled={zoom >= 3} onClick={() => mudarZoom(0.5)} className="h-11 w-11 rounded-full bg-white/15 text-xl hover:bg-white/25 disabled:opacity-40">+</button>
-              <button type="button" aria-label="Fechar imagem ampliada" onClick={() => dialogo.current?.close()} className="ml-2 min-h-11 rounded-full bg-white px-4 text-sm font-semibold text-black hover:bg-white/85">Fechar ×</button>
+              <button type="button" aria-label="Fechar imagem ampliada" onClick={fecharZoom} className="ml-2 min-h-11 rounded-full bg-white px-4 text-sm font-semibold text-black hover:bg-white/85">Fechar ×</button>
             </div>
           </div>
           <div ref={areaImagem} className="min-h-0 flex-1 overflow-auto overscroll-contain" aria-label="Imagem ampliada; deslize para explorar os detalhes">

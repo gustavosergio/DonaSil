@@ -352,10 +352,19 @@ test("zoom das fotos amplia, troca imagens e fecha pelo teclado", async ({ page 
   await page.keyboard.press('Escape');
   await expect(dialogo).not.toBeVisible();
   await expect(page.getByRole('button', { name: 'Ampliar foto 2 de Vestido Floral', exact: true })).toBeFocused();
-  expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
   await page.getByRole('button', { name: 'Ampliar foto 2 de Vestido Floral', exact: true }).click();
   await page.getByRole('button', { name: 'Fechar imagem ampliada', exact: true }).click();
   await expect(dialogo).not.toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
+  for (let ciclo = 0; ciclo < 3; ciclo++) {
+    await page.getByRole('button', { name: 'Ampliar foto 2 de Vestido Floral', exact: true }).click();
+    await expect(dialogo).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+    await page.keyboard.press('Escape');
+    await expect(dialogo).not.toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
+  }
 });
 
 test("WhatsApp flutuante está em todas as páginas sem botão no menu", async ({ page }) => {

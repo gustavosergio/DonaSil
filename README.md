@@ -43,6 +43,12 @@ Veja [CLOUDFLARE.md](CLOUDFLARE.md) para publicar e [GUIA-DA-LOJA.md](GUIA-DA-LO
 
 ## Segurança
 
+Antes de enviar alterações ao GitHub, execute `npm run verificar:push`. Esse comando verifica regras, lint, tipos, compilação sem credenciais, pacote Cloudflare e testes de navegador em sequência. Só aprova se os arquivos continuarem iguais até o final.
+
+Para bloquear um push que ainda não foi validado nesta máquina, execute `npm run hooks:instalar`. O hook usa uma aprovação local válida por até duas horas e vinculada ao conteúdo exato dos arquivos; se o código mudar, verifica novamente. Em um clone novo, instale o hook com o mesmo comando. As notificações de falha do GitHub continuam habilitadas.
+
+As fontes ficam em `src/app/fonts`, com suas licenças, para a compilação não depender do Google Fonts. O zoom restaura a rolagem no próprio fechamento e os testes aguardam o estado correto do navegador, sem pausas arbitrárias.
+
 - Nunca coloque senhas, tokens ou chaves em arquivos de código.
 - Valores secretos ficam em `.env.local` (fora do GitHub) ou no painel da
   hospedagem. Veja o modelo em `.env.example`.
