@@ -7,7 +7,7 @@ const produto = {
   id: id(2), slug: 'vestido-floral', nome: 'Vestido Floral', preco: 120,
   descricao: 'Vestido leve para o dia a dia.', composicao: 'Algodão', cuidados: 'Lavar à mão',
   ativo: true, destaque: true, demo: false, fotos: [],
-  categorias: categorias[0], variacoes, produto_cores: [],
+  categorias: categorias[0], variacoes, produto_cores: [{ id: id(30), nome: 'Off-white', cor_hex: '#f5f0e8', ordem: 0, produto_fotos: [{ id: id(31), caminho: 'teste/foto1.svg', ordem: 0 }, { id: id(32), caminho: 'teste/foto2.svg', ordem: 1 }] }],
 };
 const demo = { ...produto, id: id(4), slug: 'peca-demonstracao', nome: 'Peça de demonstração', demo: true };
 const objeto = { ...produto, id: id(6), slug: 'quadro-teste', nome: 'Quadro de teste', preco: 60, descricao: 'Quadro usado, 30 x 40 cm. Pequena marca na moldura.', composicao: '', cuidados: '', categorias: categorias[1], variacoes: [{ id: id(7), tamanho: 'Único', cor: 'Única', cor_hex: '#889988', quantidade: 1 }] };
@@ -21,6 +21,10 @@ http.createServer(async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
   const responder = (dados, status=200) => { res.statusCode=status; res.end(JSON.stringify(dados)); };
+  if (url.pathname.startsWith('/storage/v1/object/public/fotos-produtos/teste/')) {
+    res.setHeader('Content-Type', 'image/svg+xml');
+    return res.end('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="#eed8b5"/><circle cx="150" cy="200" r="80" fill="#ad6e76"/></svg>');
+  }
   if (url.pathname === '/') return responder({ teste: true });
   if (url.pathname === '/__test__/desapego' && req.method === 'POST') {
     let corpo = ''; for await (const parte of req) corpo += parte;

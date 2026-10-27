@@ -294,6 +294,27 @@ test("servidor recusa cobrar frete de roupas para objetos de desapego", async ({
   await expect(page.getByRole('link', { name: 'Enviar pedido no WhatsApp' })).toHaveCount(0);
 });
 
+test("zoom das fotos amplia, troca imagens e fecha pelo teclado", async ({ page }) => {
+  await page.goto('/catalogo/vestido-floral');
+  await page.getByRole('button', { name: 'Ampliar foto 1 de Vestido Floral', exact: true }).click();
+  const dialogo = page.getByRole('dialog');
+  await expect(dialogo).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Diminuir zoom', exact: true })).toBeDisabled();
+  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Aumentar zoom', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Aumentar zoom', exact: true })).toBeDisabled();
+  await expect(dialogo.getByText('300%', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Próxima foto', exact: true }).click();
+  await expect(dialogo.getByText('100%', { exact: true })).toBeVisible();
+  await expect(dialogo.getByRole('img')).toHaveAttribute('src', /foto2\.svg$/);
+  await page.keyboard.press('Escape');
+  await expect(dialogo).not.toBeVisible();
+  await expect(page.getByRole('button', { name: 'Ampliar foto 2 de Vestido Floral', exact: true })).toBeFocused();
+  expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
+  await page.getByRole('button', { name: 'Ampliar foto 2 de Vestido Floral', exact: true }).click();
+  await page.getByRole('button', { name: 'Fechar imagem ampliada', exact: true }).click();
+  await expect(dialogo).not.toBeVisible();
+});
+
 test("WhatsApp flutuante está em todas as páginas sem botão no menu", async ({ page }) => {
   for (const rota of ['/', '/catalogo', '/catalogo/vestido-floral', '/sacola', '/finalizar', '/desapego', '/desapego/quadro-teste', '/pagina-inexistente', '/admin/login']) {
     await page.goto(rota);
