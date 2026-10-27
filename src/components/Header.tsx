@@ -55,17 +55,17 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-sand bg-ivory/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 md:justify-start md:gap-10 lg:gap-12">
         <Link
           href="/"
-          className="font-display text-2xl font-semibold text-gold-ink"
+          className="shrink-0 font-display text-2xl font-semibold text-gold-ink"
           aria-label="Dona Sil — página inicial"
         >
           Dona Sil
         </Link>
 
         <nav
-          className="hidden items-center gap-8 text-sm font-medium md:flex"
+          className="hidden items-center gap-6 text-sm font-medium md:flex"
           aria-label="Navegação principal"
         >
           <Link href="/" className="text-ink-soft transition hover:text-gold-ink">
@@ -81,7 +81,7 @@ export default function Header() {
             href={linkWhatsApp(MENSAGEM_ATENDIMENTO)}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full bg-gold px-5 py-2 text-ink transition hover:bg-gold-deep dark:text-[#2b2420]"
+            className="rounded-full bg-[#15803d] px-5 py-2 text-white transition hover:bg-[#166534] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#15803d]"
           >
             WhatsApp
           </a>
@@ -155,7 +155,7 @@ export default function Header() {
                 href={linkWhatsApp(MENSAGEM_ATENDIMENTO)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block rounded-full bg-gold px-5 py-3 text-center text-ink transition hover:bg-gold-deep dark:text-[#2b2420]"
+                className="block rounded-full bg-[#15803d] px-5 py-3 text-center text-white transition hover:bg-[#166534] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#15803d]"
               >
                 Falar no WhatsApp
               </a>
