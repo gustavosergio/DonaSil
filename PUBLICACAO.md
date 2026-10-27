@@ -14,9 +14,9 @@ O projeto de trabalho e o Site da pasta teste opencode/Dona Sil/Site. As vendas 
 
 ## Hospedagem
 
-A publicacao foi preparada para Cloudflare Workers com OpenNext. Veja CLOUDFLARE.md para os comandos, variaveis e autenticacao. A validacao local do pacote nao substitui a conferencia no endereco HTTPS publicado.
+Publicado na Cloudflare Workers com OpenNext em 27/10/2026: https://loja-dona-sil.donasil-gustavosergio.workers.dev. Conferencia no endereco publico aprovada em computador e celular, incluindo catalogo real, sacola, finalizacao e protecao do painel. Veja CLOUDFLARE.md para os comandos e configuracao.
 
-O GitHub Actions verifica codigo, testes e pacote Cloudflare; nao publica automaticamente. A publicacao real depende de autenticar a conta Cloudflare da loja.
+O GitHub Actions verifica codigo, testes e pacote Cloudflare; nao publica automaticamente. Novas alteracoes precisam ser publicadas na Cloudflare apos as verificacoes.
 
 ## Conferencias
 

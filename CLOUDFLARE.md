@@ -2,6 +2,12 @@
 
 A loja usa Next.js com o adaptador OpenNext. O painel, as APIs e a finalização precisam de Workers; não use uma exportação estática para Pages. O pacote foi configurado sem R2, D1 ou serviços de pagamento adicionais.
 
+## Endereço publicado
+
+Publicado em 27/10/2026: https://loja-dona-sil.donasil-gustavosergio.workers.dev
+
+Verificação no endereço HTTPS aprovada em computador e celular: catálogo real, sacola, finalização, link do WhatsApp, busca e proteção do painel. Versão Cloudflare: ae9931ac-0566-411a-9ed6-1b6d043c616b.
+
 ## Configuração
 
 Use Node 24 e instale as dependências com `npm ci`. Configure no ambiente de compilação:
