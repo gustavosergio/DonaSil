@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { site } from "@/lib/site";
 import { linkWhatsApp } from "@/lib/whatsapp";
 import { formatarTelefone } from "@/lib/mascaras";
@@ -22,9 +23,9 @@ export default function SobreNos() {
             <p className="mt-4 max-w-xl leading-8 text-ink-soft">Aqui você pode conhecer as peças, escolher seus tamanhos e montar sua sacola. E, quando precisar, é só chamar no WhatsApp para conversar com a gente e combinar os detalhes do pedido.</p>
             <Link href="/catalogo" className="mt-8 inline-flex rounded-full bg-gold px-6 py-3 text-sm font-semibold text-[#2b2420] transition hover:bg-gold-deep">Conheça nossas peças</Link>
           </div>
-          {/* A foto e a história pessoal serão incluídas quando forem fornecidas pela família. */}
-          <div aria-hidden="true" className="flex aspect-square max-h-80 items-center justify-center rounded-[2rem] border border-gold-soft bg-champagne p-8 text-center">
-            <div><span className="font-display text-8xl text-gold-ink">DS</span><p className="mt-4 font-display text-3xl text-ink">Dona Sil</p><p className="mt-2 text-xs font-medium uppercase tracking-[0.25em] text-gold-ink">Moda feminina</p></div>
+          {/* Logo oficial; a foto da proprietária será adicionada quando enviada. */}
+          <div className="flex aspect-square max-h-80 items-center justify-center rounded-[2rem] border border-sand bg-white p-6">
+            <Image src="/marca/logo-dona-sil.webp" alt="Logo oficial da Dona Sil Moda Feminina" width={150} height={150} unoptimized className="h-[150px] w-[150px] object-contain" />
           </div>
         </div>
       </section>

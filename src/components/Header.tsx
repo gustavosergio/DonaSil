@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSacola } from "@/components/CarrinhoProvider";
 import AlternarTema from "@/components/AlternarTema";
 
@@ -54,10 +55,10 @@ export default function Header() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 md:justify-start md:gap-10 lg:gap-12">
         <Link
           href="/"
-          className="shrink-0 font-display text-2xl font-semibold text-gold-ink"
+          className="shrink-0 overflow-hidden rounded-full bg-white"
           aria-label="Dona Sil — página inicial"
         >
-          Dona Sil
+          <Image src="/marca/logo-dona-sil.webp" alt="Dona Sil Moda Feminina" width={56} height={56} unoptimized loading="eager" className="h-14 w-14 object-contain" />
         </Link>
 
         <nav

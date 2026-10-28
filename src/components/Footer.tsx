@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MODO_DEMO, site } from "@/lib/site";
 import { linkWhatsApp } from "@/lib/whatsapp";
 import { formatarTelefone } from "@/lib/mascaras";
@@ -8,9 +9,9 @@ export default function Footer() {
     <footer className="border-t border-sand bg-ivory">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-3 sm:px-6">
         <div>
-          <p className="font-display text-2xl font-semibold text-gold-ink">
-            {site.nome}
-          </p>
+          <Link href="/" aria-label="Dona Sil — página inicial" className="inline-flex overflow-hidden rounded-full bg-white">
+            <Image src="/marca/logo-dona-sil.webp" alt="Dona Sil Moda Feminina" width={96} height={96} unoptimized />
+          </Link>
           <p className="mt-3 max-w-xs text-sm leading-6 text-ink-soft">
             Atendimento próximo, do jeito que sempre foi — agora
             também online.
