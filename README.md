@@ -4,24 +4,16 @@ Loja virtual da Dona Sil — moda feminina com vendas online.
 
 Catálogo real com finalização pelo WhatsApp e seção Desapego para objetos de casa.
 
+## 🛍️ Acesse nossa loja
+
+[https://loja-dona-sil.donasil-gustavosergio.workers.dev](https://loja-dona-sil.donasil-gustavosergio.workers.dev)
+
 ## Tecnologias
 
 - **Next.js 16** (App Router) + **TypeScript** — páginas e lógica do site
 - **Tailwind CSS 4** — visual e identidade
 - **Supabase** — produtos, estoque, autenticação do painel e fotos
 - **Hospedagem** — Cloudflare Workers com OpenNext; não é uma exportação estática para Pages.
-
-## Como rodar no seu computador
-
-Abra a pasta do projeto no terminal e execute:
-
-```bash
-npm install    # só na primeira vez
-npm run dev    # inicia o site de teste
-```
-
-Depois abra http://localhost:3000 no navegador. Para parar, pressione
-Ctrl+C no terminal.
 
 ## Comandos principais
 
