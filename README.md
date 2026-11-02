@@ -6,7 +6,7 @@ Catálogo real com finalização pelo WhatsApp e seção Desapego para objetos d
 
 ## 🛍️ Acesse nossa loja
 
-[https://loja-dona-sil.donasil-gustavosergio.workers.dev](https://loja-dona-sil.donasil-gustavosergio.workers.dev)
+[https://donasilmodafeminina.com.br](https://donasilmodafeminina.com.br)
 
 ## Tecnologias
 
