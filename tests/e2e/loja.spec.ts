@@ -257,35 +257,17 @@ test("UF preenchida pelo CEP permanece bloqueada", async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Confira o seu pedido' })).toBeVisible();
 });
 
-test("Desapego separa objetos da moda e combina transporte pelo WhatsApp", async ({ page }) => {
-  await page.goto('/desapego');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await expect(page.getByRole('heading', { name: 'Quadro de teste', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Vestido Floral', exact: true })).toHaveCount(0);
-  await page.getByRole('link', { name: /Quadro de teste,.*ver detalhes/ }).click();
-  await expect(page.getByRole('heading', { name: 'Quadro de teste', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Adicionar à sacola' })).toHaveCount(0);
-  const contato = page.getByRole('link', { name: 'Tenho interesse — falar no WhatsApp' });
-  const destino = new URL((await contato.getAttribute('href'))!);
-  expect(destino.hostname).toBe('wa.me');
-  expect(destino.searchParams.get('text')).toContain('Quadro de teste');
-  await expect(page.getByText(/69,00 no cartão/)).toBeVisible();
-  await page.goto('/catalogo');
-  await expect(page.getByRole('heading', { name: 'Vestido Floral', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Quadro de teste', exact: true })).toHaveCount(0);
-  await page.goto('/catalogo/quadro-teste');
-  await expect(page.getByRole('heading', { name: 'Essa página saiu da vitrine.' })).toBeVisible();
-  await page.goto('/desapego/vestido-floral');
-  await expect(page.getByRole('heading', { name: 'Essa página saiu da vitrine.' })).toBeVisible();
-});
-
-test("Desapego vazio apresenta aviso sem anúncios inventados", async ({ page, request }) => {
-  try {
-    await request.post('http://127.0.0.1:4010/__test__/desapego', { data: { mostrar: false } });
-    await page.goto('/desapego');
-    await expect(page.getByText('Os próximos desapegos estão chegando.')).toBeVisible();
-    await expect(page.getByRole('link', { name: /ver detalhes/ })).toHaveCount(0);
-  } finally { await request.post('http://127.0.0.1:4010/__test__/desapego', { data: { mostrar: true } }); }
+test("Desapego removido não aparece na navegação e suas rotas retornam 404", async ({ page }) => {
+  for (const rota of ['/', '/catalogo']) {
+    await page.goto(rota);
+    await expect(page.locator('a[href^="/desapego"]')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Quadro de teste', exact: true })).toHaveCount(0);
+  }
+  for (const rota of ['/desapego', '/desapego/quadro-teste']) {
+    const resposta = await page.goto(rota);
+    expect(resposta?.status()).toBe(404);
+    await expect(page.getByRole('heading', { name: 'Essa página saiu da vitrine.' })).toBeVisible();
+  }
 });
 
 test("painel prepara anúncio de Desapego com uma unidade", async ({ page }) => {

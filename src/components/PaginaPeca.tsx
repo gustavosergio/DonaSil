@@ -47,10 +47,10 @@ export default function PaginaPeca(props: Props) {
     >
       <nav aria-label="Voltar ao catálogo">
         <Link
-          href={props.secao === "desapego" ? "/desapego" : "/catalogo"}
+          href="/catalogo"
           className="text-sm font-medium text-gold-ink hover:underline"
         >
-          {props.secao === "desapego" ? "← Voltar ao Desapego" : "← Voltar ao catálogo"}
+          ← Voltar ao catálogo
         </Link>
       </nav>
 

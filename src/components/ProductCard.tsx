@@ -19,9 +19,11 @@ export default function ProductCard({ produto }: { produto: ProdutoResumo }) {
     produto.disponivel ? "" : " — esgotado"
   }`;
 
+  if (produto.categoriaSlug === "desapego") return null;
+
   return (
     <Link
-      href={produto.categoriaSlug === "desapego" ? `/desapego/${produto.slug}` : `/catalogo/${produto.slug}`}
+      href={`/catalogo/${produto.slug}`}
       aria-label={`${rotulo} — ver detalhes`}
       className="group block"
     >

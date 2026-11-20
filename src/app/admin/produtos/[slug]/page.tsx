@@ -102,15 +102,15 @@ async function ConteudoProduto({ params }: PropsConteudo) {
         <TituloSecao
           titulo={produto.nome}
           descricao={`Peça carregada pelo acesso administrativo — ativa ou rascunho. Categoria: ${produto.categoriaNome}.`}
-          acoes={
+          acoes={produto.categoriaSlug !== "desapego" && (
             <BotaoLink
-              href={(produto.categoriaSlug === "desapego" ? `/desapego/${produto.slug}` : `/catalogo/${produto.slug}`) as Route}
+              href={`/catalogo/${produto.slug}` as Route}
               variante="secundario"
             >
               <IconeOlho className="h-4 w-4" />
               Ver na loja
             </BotaoLink>
-          }
+          )}
         />
       </div>
 

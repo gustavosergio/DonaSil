@@ -71,7 +71,6 @@ export default function Header() {
           <Link href="/catalogo" className="text-ink-soft transition hover:text-gold-ink">
             Catálogo
           </Link>
-          <Link href="/desapego" className="text-ink-soft transition hover:text-gold-ink">Desapego</Link>
           <LinkSacola />
           <AlternarTema />
           <Link href="/sobre-nos" className="whitespace-nowrap text-ink-soft transition hover:text-gold-ink">Sobre nós</Link>
@@ -135,7 +134,6 @@ export default function Header() {
                 Catálogo
               </Link>
             </li>
-            <li><Link href="/desapego" onClick={() => setMenuAberto(false)} className="block rounded-lg px-3 py-3 text-ink transition hover:bg-champagne">Desapego</Link></li>
             <li>
               <div className="rounded-lg px-3 py-3 transition hover:bg-champagne">
                 <LinkSacola aoNavegar={() => setMenuAberto(false)} />

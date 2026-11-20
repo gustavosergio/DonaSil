@@ -14,7 +14,7 @@ async function main() {
       servidor.once('exit', (codigo) => { clearTimeout(limite); reject(new Error(`Servidor encerrou: ${codigo}`)); });
     });
   }
-  for (const rota of ['/', '/catalogo', '/desapego', '/sacola', '/finalizar', '/robots.txt']) {
+  for (const rota of ['/', '/catalogo', '/sacola', '/finalizar', '/robots.txt']) {
     const resposta = await fetch(`${base}${rota}`, {
       redirect: 'manual', signal: AbortSignal.timeout(30000),
     });
